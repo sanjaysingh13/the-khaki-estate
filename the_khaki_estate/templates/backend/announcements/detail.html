@@ -1,0 +1,438 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block title %}{{ announcement.title }} - Announcement Details{% endblock %}
+{% block content %}
+  <div class="container-fluid">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{% url 'backend:dashboard' %}">Dashboard</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a href="{% url 'backend:announcement_list' %}">Announcements</a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">{{ announcement.title|truncatewords:5 }}</li>
+      </ol>
+    </nav>
+    <div class="row">
+      <!-- Main Content -->
+      <div class="col-lg-8">
+        <!-- Announcement Card -->
+        <div class="card {% if announcement.is_urgent %}border-danger{% elif announcement.is_pinned %}border-warning{% endif %}">
+          <!-- Card Header -->
+          <div class="card-header">
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="flex-grow-1">
+                <div class="d-flex align-items-center mb-2">
+                  <span class="badge bg-{{ announcement.category.color_code|slice:'1:' }} me-2">{{ announcement.category.name }}</span>
+                  {% if announcement.is_urgent %}<span class="badge bg-danger me-2">Urgent</span>{% endif %}
+                  {% if announcement.is_pinned %}<span class="badge bg-warning me-2">Pinned</span>{% endif %}
+                </div>
+                <h1 class="h4 mb-0">{{ announcement.title }}</h1>
+              </div>
+              <div class="text-end">
+                {% if can_edit %}
+                  <a href="{% url 'backend:announcement_edit' announcement.id %}"
+                     class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-edit me-1"></i>Edit
+                  </a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <!-- Card Body -->
+          <div class="card-body">
+            <!-- Announcement Content -->
+            <div class="mb-4">{{ announcement.content|linebreaks }}</div>
+            <!-- Attachment Section -->
+            {% if announcement.attachment %}
+              <div class="mb-4">
+                <h6 class="text-muted mb-2">
+                  <i class="fas fa-paperclip me-2"></i>Attachment
+                </h6>
+                <div class="border rounded p-3">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-file text-muted me-3 fa-2x"></i>
+                    <div class="flex-grow-1">
+                      <div class="fw-bold">{{ announcement.attachment.name|slice:"12:" }}</div>
+                      <small class="text-muted">{{ announcement.attachment.size|filesizeformat }}</small>
+                    </div>
+                    <a href="{{ announcement.attachment.url }}"
+                       class="btn btn-outline-primary btn-sm"
+                       target="_blank">
+                      <i class="fas fa-download me-1"></i>Download
+                    </a>
+                  </div>
+                </div>
+              </div>
+            {% endif %}
+            <!-- Validity Information -->
+            {% if announcement.valid_until %}
+              <div class="alert alert-info">
+                <i class="fas fa-clock me-2"></i>
+                <strong>Valid Until:</strong> {{ announcement.valid_until|date:"F d, Y \a\t g:i A" }}
+              </div>
+            {% endif %}
+            <!-- Author and Timestamp Information -->
+            <div class="border-top pt-3">
+              <div class="row">
+                <div class="col-md-6">
+                  <small class="text-muted">
+                    <i class="fas fa-user me-1"></i>
+                    <strong>Author:</strong> {{ announcement.author.get_full_name }}
+                  </small>
+                </div>
+                <div class="col-md-6 text-md-end">
+                  <small class="text-muted">
+                    <i class="fas fa-calendar me-1"></i>
+                    <strong>Posted:</strong> {{ announcement.created_at|date:"F d, Y \a\t g:i A" }}
+                  </small>
+                </div>
+              </div>
+              {% if announcement.updated_at != announcement.created_at %}
+                <div class="row mt-1">
+                  <div class="col-md-6">
+                    <small class="text-muted">
+                      <i class="fas fa-edit me-1"></i>
+                      <strong>Last Updated:</strong> {{ announcement.updated_at|date:"F d, Y \a\t g:i A" }}
+                    </small>
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <!-- Comments Section -->
+        <div class="card mt-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-comments text-primary me-2"></i> Comments ({{ comments|length }})
+            </h5>
+          </div>
+          <div class="card-body">
+            <!-- Add Comment Form -->
+            <form id="comment-form" class="mb-4">
+              {% csrf_token %}
+              <div class="mb-3">
+                <label for="comment-content" class="form-label">Add a Comment</label>
+                <textarea class="form-control"
+                          id="comment-content"
+                          name="content"
+                          rows="3"
+                          placeholder="Share your thoughts on this announcement..."></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-paper-plane me-2"></i>Post Comment
+              </button>
+            </form>
+            <!-- Comments List -->
+            <div id="comments-container">
+              {% if comments %}
+                {% for comment in comments %}
+                  <div class="comment-item border-bottom pb-3 mb-3"
+                       data-comment-id="{{ comment.id }}">
+                    <div class="d-flex">
+                      <div class="flex-shrink-0 me-3">
+                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
+                             style="width: 40px;
+                                    height: 40px">
+                          {{ comment.author.first_name|first|upper }}{{ comment.author.last_name|first|upper }}
+                        </div>
+                      </div>
+                      <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                          <h6 class="mb-0">{{ comment.author.get_full_name }}</h6>
+                          <small class="text-muted">{{ comment.created_at|timesince }} ago</small>
+                        </div>
+                        <p class="mb-2">{{ comment.content|linebreaks }}</p>
+                        <div class="d-flex align-items-center">
+                          <button class="btn btn-sm btn-outline-secondary reply-btn"
+                                  data-comment-id="{{ comment.id }}">
+                            <i class="fas fa-reply me-1"></i>Reply
+                          </button>
+                        </div>
+                        <!-- Reply Form (Hidden by default) -->
+                        <div class="reply-form mt-3" style="display: none;">
+                          <form class="reply-comment-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="parent_id" value="{{ comment.id }}" />
+                            <div class="mb-2">
+                              <textarea class="form-control form-control-sm"
+                                        name="content"
+                                        rows="2"
+                                        placeholder="Write a reply..."></textarea>
+                            </div>
+                            <div class="d-flex gap-2">
+                              <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="fas fa-paper-plane me-1"></i>Reply
+                              </button>
+                              <button type="button" class="btn btn-secondary btn-sm cancel-reply">Cancel</button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div class="text-center py-4">
+                  <i class="fas fa-comments text-muted fa-3x mb-3"></i>
+                  <p class="text-muted">No comments yet. Be the first to comment!</p>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Sidebar -->
+      <div class="col-lg-4">
+        <!-- Read Statistics (Committee Members Only) -->
+        {% if read_stats %}
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5 class="card-title mb-0">
+                <i class="fas fa-chart-pie text-info me-2"></i> Read Statistics
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="text-center mb-3">
+                <div class="display-6 text-primary">{{ read_stats.read_percentage|floatformat:0 }}%</div>
+                <small class="text-muted">Read Rate</small>
+              </div>
+              <div class="row text-center">
+                <div class="col-6">
+                  <div class="border rounded p-2">
+                    <div class="h5 mb-0 text-success">{{ read_stats.read_count }}</div>
+                    <small class="text-muted">Read</small>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="border rounded p-2">
+                    <div class="h5 mb-0 text-muted">{{ read_stats.total_residents|add:"-"|add:read_stats.read_count }}</div>
+                    <small class="text-muted">Unread</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endif %}
+        <!-- Related Actions -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-cog text-secondary me-2"></i> Actions
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="d-grid gap-2">
+              <a href="{% url 'backend:announcement_list' %}"
+                 class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Announcements
+              </a>
+              {% if can_edit %}
+                <a href="{% url 'backend:announcement_edit' announcement.id %}"
+                   class="btn btn-outline-secondary">
+                  <i class="fas fa-edit me-2"></i>Edit Announcement
+                </a>
+              {% endif %}
+              <button class="btn btn-outline-info" onclick="window.print()">
+                <i class="fas fa-print me-2"></i>Print
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Quick Links -->
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-link text-primary me-2"></i> Quick Links
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="list-group list-group-flush">
+              <a href="{% url 'backend:announcement_list' %}"
+                 class="list-group-item list-group-item-action">
+                <i class="fas fa-bullhorn me-2"></i>All Announcements
+              </a>
+              <a href="{% url 'backend:maintenance_create' %}"
+                 class="list-group-item list-group-item-action">
+                <i class="fas fa-wrench me-2"></i>Report Maintenance Issue
+              </a>
+              <a href="{% url 'backend:booking_create' %}"
+                 class="list-group-item list-group-item-action">
+                <i class="fas fa-calendar-plus me-2"></i>Book Facility
+              </a>
+              <a href="{% url 'backend:event_list' %}"
+                 class="list-group-item list-group-item-action">
+                <i class="fas fa-calendar-alt me-2"></i>Upcoming Events
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- JavaScript for Comments and Interactive Features -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Comment form submission
+      const commentForm = document.getElementById('comment-form');
+      if (commentForm) {
+        commentForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+
+          const formData = new FormData(this);
+          const content = formData.get('content').trim();
+
+          if (!content) {
+            alert('Please enter a comment.');
+            return;
+          }
+
+          fetch('{% url "backend:add_comment" announcement.id %}', {
+              method: 'POST',
+              body: formData,
+              headers: {
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+              }
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.status === 'success') {
+                // Add new comment to the list
+                addCommentToDOM(data.comment);
+                this.reset();
+              } else {
+                alert('Error: ' + data.message);
+              }
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              alert('An error occurred while posting the comment.');
+            });
+        });
+      }
+
+      // Reply button functionality
+      document.querySelectorAll('.reply-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const commentId = this.dataset.commentId;
+          const replyForm = this.closest('.comment-item').querySelector('.reply-form');
+          replyForm.style.display = replyForm.style.display === 'none' ? 'block' : 'none';
+        });
+      });
+
+      // Cancel reply functionality
+      document.querySelectorAll('.cancel-reply').forEach(btn => {
+        btn.addEventListener('click', function() {
+          this.closest('.reply-form').style.display = 'none';
+        });
+      });
+
+      // Reply form submission
+      document.querySelectorAll('.reply-comment-form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+
+          const formData = new FormData(this);
+          const content = formData.get('content').trim();
+
+          if (!content) {
+            alert('Please enter a reply.');
+            return;
+          }
+
+          fetch('{% url "backend:add_comment" announcement.id %}', {
+              method: 'POST',
+              body: formData,
+              headers: {
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+              }
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.status === 'success') {
+                // Add reply to the appropriate comment
+                addReplyToDOM(data.comment, formData.get('parent_id'));
+                this.reset();
+                this.closest('.reply-form').style.display = 'none';
+              } else {
+                alert('Error: ' + data.message);
+              }
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              alert('An error occurred while posting the reply.');
+            });
+        });
+      });
+
+      // Function to add new comment to DOM
+      function addCommentToDOM(comment) {
+        const commentsContainer = document.getElementById('comments-container');
+        const commentHTML = `
+            <div class="comment-item border-bottom pb-3 mb-3" data-comment-id="${comment.id}">
+                <div class="d-flex">
+                    <div class="flex-shrink-0 me-3">
+                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                            ${comment.author.charAt(0).toUpperCase()}
+                        </div>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <h6 class="mb-0">${comment.author}</h6>
+                            <small class="text-muted">Just now</small>
+                        </div>
+                        <p class="mb-2">${comment.content.replace(/\n/g, '<br />')}</p>
+                        <div class="d-flex align-items-center">
+                            <button class="btn btn-sm btn-outline-secondary reply-btn" data-comment-id="${comment.id}">
+                                <i class="fas fa-reply me-1"></i>Reply
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // If no comments exist, replace the empty state
+        if (commentsContainer.querySelector('.text-center')) {
+          commentsContainer.innerHTML = commentHTML;
+        } else {
+          commentsContainer.insertAdjacentHTML('beforeend', commentHTML);
+        }
+
+        // Re-attach event listeners to new reply button
+        const newReplyBtn = commentsContainer.querySelector(`[data-comment-id="${comment.id}"] .reply-btn`);
+        if (newReplyBtn) {
+          newReplyBtn.addEventListener('click', function() {
+            const commentId = this.dataset.commentId;
+            const replyForm = this.closest('.comment-item').querySelector('.reply-form');
+            if (replyForm) {
+              replyForm.style.display = replyForm.style.display === 'none' ? 'block' : 'none';
+            }
+          });
+        }
+      }
+
+      // Function to add reply to DOM
+      function addReplyToDOM(reply, parentId) {
+        const parentComment = document.querySelector(`[data-comment-id="${parentId}"]`);
+        if (parentComment) {
+          const replyHTML = `
+                <div class="reply-item ms-5 mt-2 p-2 bg-light rounded">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <h6 class="mb-0 small">${reply.author}</h6>
+                        <small class="text-muted">Just now</small>
+                    </div>
+                    <p class="mb-0 small">${reply.content.replace(/\n/g, '<br />')}</p>
+                </div>
+            `;
+          parentComment.insertAdjacentHTML('beforeend', replyHTML);
+        }
+      }
+    });
+  </script>
+{% endblock %}

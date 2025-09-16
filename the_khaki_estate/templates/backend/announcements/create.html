@@ -1,0 +1,437 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block title %}Create Announcement - Housing Complex Management{% endblock title %}
+{% block content %}
+  <style>
+    .preview-hidden { display: none; }
+  </style>
+  <div class="container-fluid">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{% url 'backend:dashboard' %}">Dashboard</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a href="{% url 'backend:announcement_list' %}">Announcements</a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">Create Announcement</li>
+      </ol>
+    </nav>
+    <!-- Page Header -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h1 class="h3 mb-0">
+              <i class="fas fa-bullhorn text-primary me-2"></i> Create New Announcement
+            </h1>
+            <p class="text-muted mb-0">Share important information with all residents</p>
+          </div>
+          <div>
+            <a href="{% url 'backend:announcement_list' %}"
+               class="btn btn-outline-secondary">
+              <i class="fas fa-arrow-left me-2"></i>Back to Announcements
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <!-- Main Form -->
+      <div class="col-lg-8">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-edit text-primary me-2"></i> Announcement Details
+            </h5>
+          </div>
+          <div class="card-body">
+            <form method="post" enctype="multipart/form-data" id="announcement-form">
+              {% csrf_token %}
+              <!-- Title Field -->
+              <div class="mb-4">
+                <label for="title" class="form-label">
+                  <i class="fas fa-heading me-1"></i>
+                  Title <span class="text-danger">*</span>
+                </label>
+                <input type="text"
+                       class="form-control"
+                       id="title"
+                       name="title"
+                       placeholder="Enter announcement title..."
+                       required />
+                <div class="form-text">Keep the title concise and descriptive</div>
+              </div>
+              <!-- Category Selection -->
+              <div class="mb-4">
+                <label for="category" class="form-label">
+                  <i class="fas fa-tags me-1"></i>
+                  Category <span class="text-danger">*</span>
+                </label>
+                <select class="form-select" id="category" name="category" required>
+                  <option value="">Select a category...</option>
+                  {% for category in categories %}
+                    <option value="{{ category.id }}"
+                            data-color="{{ category.color_code }}"
+                            data-urgent="{{ category.is_urgent }}">{{ category.name }}</option>
+                  {% endfor %}
+                </select>
+                <div class="form-text">Choose the most appropriate category for your announcement</div>
+              </div>
+              <!-- Content Field -->
+              <div class="mb-4">
+                <label for="content" class="form-label">
+                  <i class="fas fa-align-left me-1"></i>
+                  Content <span class="text-danger">*</span>
+                </label>
+                <textarea class="form-control"
+                          id="content"
+                          name="content"
+                          rows="8"
+                          placeholder="Write your announcement content here..."
+                          required></textarea>
+                <div class="form-text">
+                  <i class="fas fa-info-circle me-1"></i> Use clear, concise language. Include all relevant details residents need to know.
+                </div>
+              </div>
+              <!-- Display Options -->
+              <div class="row mb-4">
+                <div class="col-md-6">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           id="is_urgent"
+                           name="is_urgent" />
+                    <label class="form-check-label" for="is_urgent">
+                      <i class="fas fa-exclamation-triangle text-danger me-1"></i>
+                      Mark as Urgent
+                    </label>
+                    <div class="form-text">Urgent announcements are highlighted and sent immediately</div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           id="is_pinned"
+                           name="is_pinned" />
+                    <label class="form-check-label" for="is_pinned">
+                      <i class="fas fa-thumbtack text-warning me-1"></i>
+                      Pin to Top
+                    </label>
+                    <div class="form-text">Pinned announcements appear at the top of the list</div>
+                  </div>
+                </div>
+              </div>
+              <!-- Validity Period -->
+              <div class="mb-4">
+                <label for="valid_until" class="form-label">
+                  <i class="fas fa-clock me-1"></i>
+                  Valid Until (Optional)
+                </label>
+                <input type="datetime-local"
+                       class="form-control"
+                       id="valid_until"
+                       name="valid_until" />
+                <div class="form-text">
+                  Set an expiry date for time-sensitive announcements. Leave blank for permanent announcements.
+                </div>
+              </div>
+              <!-- File Attachment -->
+              <div class="mb-4">
+                <label for="attachment" class="form-label">
+                  <i class="fas fa-paperclip me-1"></i>
+                  Attachment (Optional)
+                </label>
+                <input type="file"
+                       class="form-control"
+                       id="attachment"
+                       name="attachment"
+                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif" />
+                <div class="form-text">
+                  Upload documents, images, or other files related to this announcement. Supported formats: PDF, DOC, DOCX, JPG, PNG, GIF
+                </div>
+              </div>
+              <!-- Preview Section -->
+              <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="mb-0">
+                    <i class="fas fa-eye text-info me-1"></i> Preview
+                  </h6>
+                  <button type="button" class="btn btn-sm btn-outline-info" id="toggle-preview">
+                    <i class="fas fa-eye me-1"></i>Show Preview
+                  </button>
+                </div>
+                <div id="preview-container" class="preview-hidden">
+                  <div class="card border">
+                    <div class="card-header">
+                      <div class="d-flex align-items-center">
+                        <span class="badge bg-primary me-2" id="preview-category">Category</span>
+                        <span class="badge bg-danger me-2 preview-hidden" id="preview-urgent">Urgent</span>
+                        <span class="badge bg-warning me-2 preview-hidden" id="preview-pinned">Pinned</span>
+                      </div>
+                      <h5 class="mt-2 mb-0" id="preview-title">Announcement Title</h5>
+                    </div>
+                    <div class="card-body">
+                      <div id="preview-content">Announcement content will appear here...</div>
+                      <div id="preview-attachment" class="mt-3 preview-hidden">
+                        <i class="fas fa-paperclip text-muted me-1"></i>
+                        <small class="text-muted">Attachment included</small>
+                      </div>
+                      <div id="preview-validity" class="mt-2 preview-hidden">
+                        <i class="fas fa-clock text-muted me-1"></i>
+                        <small class="text-muted">Valid until: <span id="preview-valid-until"></span></small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Form Actions -->
+              <div class="d-flex justify-content-between">
+                <a href="{% url 'backend:announcement_list' %}"
+                   class="btn btn-outline-secondary">
+                  <i class="fas fa-times me-2"></i>Cancel
+                </a>
+                <div>
+                  <button type="button" class="btn btn-outline-primary me-2" id="save-draft">
+                    <i class="fas fa-save me-2"></i>Save as Draft
+                  </button>
+                  <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane me-2"></i>Publish Announcement
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      <!-- Sidebar -->
+      <div class="col-lg-4">
+        <!-- Guidelines Card -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-lightbulb text-warning me-2"></i> Guidelines
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="list-group list-group-flush">
+              <div class="list-group-item border-0 px-0">
+                <h6 class="text-primary mb-1">
+                  <i class="fas fa-check-circle me-1"></i> Best Practices
+                </h6>
+                <ul class="small mb-0">
+                  <li>Use clear, concise language</li>
+                  <li>Include all relevant details</li>
+                  <li>Set appropriate urgency level</li>
+                  <li>Add attachments when helpful</li>
+                </ul>
+              </div>
+              <div class="list-group-item border-0 px-0">
+                <h6 class="text-warning mb-1">
+                  <i class="fas fa-exclamation-triangle me-1"></i> Urgent Announcements
+                </h6>
+                <ul class="small mb-0">
+                  <li>Use for emergencies only</li>
+                  <li>Will override notification preferences</li>
+                  <li>Sent via all channels immediately</li>
+                </ul>
+              </div>
+              <div class="list-group-item border-0 px-0">
+                <h6 class="text-info mb-1">
+                  <i class="fas fa-info-circle me-1"></i> Categories
+                </h6>
+                <ul class="small mb-0">
+                  <li>Choose the most relevant category</li>
+                  <li>Helps residents filter content</li>
+                  <li>Improves notification targeting</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Recent Announcements -->
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-history text-secondary me-2"></i> Recent Announcements
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="list-group list-group-flush">
+              <a href="{% url 'backend:announcement_list' %}"
+                 class="list-group-item list-group-item-action">
+                <i class="fas fa-list me-2"></i>View All Announcements
+              </a>
+              <a href="{% url 'backend:announcement_list' %}?urgent=true"
+                 class="list-group-item list-group-item-action">
+                <i class="fas fa-exclamation-triangle me-2"></i>Urgent Only
+              </a>
+              <a href="{% url 'backend:announcement_list' %}?read=unread"
+                 class="list-group-item list-group-item-action">
+                <i class="fas fa-envelope me-2"></i>Unread Only
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- JavaScript for Enhanced Form Functionality -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('announcement-form');
+      const titleInput = document.getElementById('title');
+      const contentInput = document.getElementById('content');
+      const categorySelect = document.getElementById('category');
+      const urgentCheckbox = document.getElementById('is_urgent');
+      const pinnedCheckbox = document.getElementById('is_pinned');
+      const validUntilInput = document.getElementById('valid_until');
+      const attachmentInput = document.getElementById('attachment');
+      const previewContainer = document.getElementById('preview-container');
+      const togglePreviewBtn = document.getElementById('toggle-preview');
+
+      // Preview elements
+      const previewTitle = document.getElementById('preview-title');
+      const previewContent = document.getElementById('preview-content');
+      const previewCategory = document.getElementById('preview-category');
+      const previewUrgent = document.getElementById('preview-urgent');
+      const previewPinned = document.getElementById('preview-pinned');
+      const previewAttachment = document.getElementById('preview-attachment');
+      const previewValidity = document.getElementById('preview-validity');
+      const previewValidUntil = document.getElementById('preview-valid-until');
+
+      // Toggle preview functionality
+      togglePreviewBtn.addEventListener('click', function() {
+        const isVisible = previewContainer.style.display !== 'none';
+        previewContainer.style.display = isVisible ? 'none' : 'block';
+        this.innerHTML = isVisible ?
+          '<i class="fas fa-eye me-1"></i>Show Preview' :
+          '<i class="fas fa-eye-slash me-1"></i>Hide Preview';
+      });
+
+      // Auto-update preview when form fields change
+      function updatePreview() {
+        // Update title
+        previewTitle.textContent = titleInput.value || 'Announcement Title';
+
+        // Update content
+        const content = contentInput.value || 'Announcement content will appear here...';
+        previewContent.innerHTML = content.replace(/\n/g, '<br />');
+
+        // Update category
+        const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+        if (selectedOption.value) {
+          previewCategory.textContent = selectedOption.text;
+          previewCategory.className = `badge bg-${selectedOption.dataset.color?.slice(1) || 'primary'} me-2`;
+        } else {
+          previewCategory.textContent = 'Category';
+          previewCategory.className = 'badge bg-primary me-2';
+        }
+
+        // Update urgency badge
+        previewUrgent.style.display = urgentCheckbox.checked ? 'inline-block' : 'none';
+
+        // Update pinned badge
+        previewPinned.style.display = pinnedCheckbox.checked ? 'inline-block' : 'none';
+
+        // Update attachment indicator
+        previewAttachment.style.display = attachmentInput.files.length > 0 ? 'block' : 'none';
+
+        // Update validity period
+        if (validUntilInput.value) {
+          const date = new Date(validUntilInput.value);
+          previewValidUntil.textContent = date.toLocaleDateString() + ' at ' + date.toLocaleTimeString();
+          previewValidity.style.display = 'block';
+        } else {
+          previewValidity.style.display = 'none';
+        }
+      }
+
+      // Add event listeners for real-time preview updates
+      [titleInput, contentInput, categorySelect, urgentCheckbox, pinnedCheckbox, validUntilInput, attachmentInput]
+      .forEach(element => {
+        element.addEventListener('input', updatePreview);
+        element.addEventListener('change', updatePreview);
+      });
+
+      // Category change handler for auto-setting urgency
+      categorySelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        if (selectedOption.dataset.urgent === 'true') {
+          urgentCheckbox.checked = true;
+        }
+      });
+
+      // Form validation
+      form.addEventListener('submit', function(e) {
+        const title = titleInput.value.trim();
+        const content = contentInput.value.trim();
+        const category = categorySelect.value;
+
+        if (!title || !content || !category) {
+          e.preventDefault();
+          alert('Please fill in all required fields (Title, Content, and Category).');
+          return false;
+        }
+
+        // Confirm urgent announcements
+        if (urgentCheckbox.checked) {
+          const confirmed = confirm('Are you sure you want to mark this as urgent? Urgent announcements override all notification preferences and are sent immediately.');
+          if (!confirmed) {
+            e.preventDefault();
+            return false;
+          }
+        }
+
+        // Show loading state
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Publishing...';
+        submitBtn.disabled = true;
+      });
+
+      // Save draft functionality
+      document.getElementById('save-draft').addEventListener('click', function() {
+        // In a real implementation, you would save the form data as a draft
+        alert('Draft saved! (This is a placeholder - implement draft saving functionality)');
+      });
+
+      // Auto-save functionality (every 30 seconds)
+      let autoSaveTimeout;
+
+      function autoSave() {
+        const title = titleInput.value.trim();
+        const content = contentInput.value.trim();
+
+        if (title || content) {
+          // In a real implementation, you would save the form data
+          console.log('Auto-saving draft...');
+        }
+      }
+
+      [titleInput, contentInput].forEach(input => {
+        input.addEventListener('input', function() {
+          clearTimeout(autoSaveTimeout);
+          autoSaveTimeout = setTimeout(autoSave, 30000);
+        });
+      });
+
+      // Character count for content
+      const contentCharCount = document.createElement('div');
+      contentCharCount.className = 'form-text text-end';
+      contentInput.parentNode.appendChild(contentCharCount);
+
+      function updateCharCount() {
+        const count = contentInput.value.length;
+        contentCharCount.textContent = `${count} characters`;
+        contentCharCount.className = `form-text text-end ${count > 1000 ? 'text-warning' : ''}`;
+      }
+
+      contentInput.addEventListener('input', updateCharCount);
+      updateCharCount();
+    });
+  </script>
+{% endblock body %}

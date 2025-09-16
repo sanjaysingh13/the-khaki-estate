@@ -1,0 +1,506 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block title %}Create Event - Housing Complex Management{% endblock %}
+{% block content %}
+  <div class="container-fluid">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{% url 'backend:dashboard' %}">Dashboard</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a href="{% url 'backend:event_list' %}">Events</a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">Create Event</li>
+      </ol>
+    </nav>
+    <!-- Page Header -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h1 class="h3 mb-0">
+              <i class="fas fa-calendar-plus text-primary me-2"></i> Create New Event
+            </h1>
+            <p class="text-muted mb-0">Organize community events and activities</p>
+          </div>
+          <div>
+            <a href="{% url 'backend:event_list' %}"
+               class="btn btn-outline-secondary">
+              <i class="fas fa-arrow-left me-2"></i>Back to Events
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <!-- Main Form -->
+      <div class="col-lg-8">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-edit text-primary me-2"></i> Event Details
+            </h5>
+          </div>
+          <div class="card-body">
+            <form method="post" id="event-form">
+              {% csrf_token %}
+              <!-- Title Field -->
+              <div class="mb-4">
+                <label for="title" class="form-label">
+                  <i class="fas fa-heading me-1"></i>
+                  Event Title <span class="text-danger">*</span>
+                </label>
+                <input type="text"
+                       class="form-control"
+                       id="title"
+                       name="title"
+                       placeholder="Enter event title..."
+                       required />
+                <div class="form-text">Make it clear and engaging to attract attendees</div>
+              </div>
+              <!-- Event Type Selection -->
+              <div class="mb-4">
+                <label for="event_type" class="form-label">
+                  <i class="fas fa-tags me-1"></i>
+                  Event Type <span class="text-danger">*</span>
+                </label>
+                <select class="form-select" id="event_type" name="event_type" required>
+                  <option value="">Select event type...</option>
+                  {% for type_code, type_name in event_types %}<option value="{{ type_code }}">{{ type_name }}</option>{% endfor %}
+                </select>
+                <div class="form-text">Choose the most appropriate category for your event</div>
+              </div>
+              <!-- Description Field -->
+              <div class="mb-4">
+                <label for="description" class="form-label">
+                  <i class="fas fa-align-left me-1"></i>
+                  Event Description <span class="text-danger">*</span>
+                </label>
+                <textarea class="form-control"
+                          id="description"
+                          name="description"
+                          rows="5"
+                          placeholder="Describe your event in detail..."
+                          required></textarea>
+                <div class="form-text">
+                  <i class="fas fa-lightbulb me-1"></i> Include details like: agenda, what to bring, dress code, special instructions, etc.
+                </div>
+              </div>
+              <!-- Date and Time -->
+              <div class="row mb-4">
+                <div class="col-md-6">
+                  <label for="start_datetime" class="form-label">
+                    <i class="fas fa-calendar me-1"></i>
+                    Start Date & Time <span class="text-danger">*</span>
+                  </label>
+                  <input type="datetime-local"
+                         class="form-control"
+                         id="start_datetime"
+                         name="start_datetime"
+                         required />
+                </div>
+                <div class="col-md-6">
+                  <label for="end_datetime" class="form-label">
+                    <i class="fas fa-calendar me-1"></i>
+                    End Date & Time <span class="text-danger">*</span>
+                  </label>
+                  <input type="datetime-local"
+                         class="form-control"
+                         id="end_datetime"
+                         name="end_datetime"
+                         required />
+                </div>
+              </div>
+              <!-- Location -->
+              <div class="mb-4">
+                <label for="location" class="form-label">
+                  <i class="fas fa-map-marker-alt me-1"></i>
+                  Location <span class="text-danger">*</span>
+                </label>
+                <input type="text"
+                       class="form-control"
+                       id="location"
+                       name="location"
+                       placeholder="Enter event location..."
+                       required />
+                <div class="form-text">Specify the exact location where the event will take place</div>
+              </div>
+              <!-- Capacity and RSVP -->
+              <div class="row mb-4">
+                <div class="col-md-6">
+                  <label for="max_attendees" class="form-label">
+                    <i class="fas fa-users me-1"></i>
+                    Maximum Attendees
+                  </label>
+                  <input type="number"
+                         class="form-control"
+                         id="max_attendees"
+                         name="max_attendees"
+                         min="1"
+                         placeholder="Leave blank for unlimited" />
+                  <div class="form-text">Set a limit if space is limited</div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-check form-switch mt-4">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           id="is_rsvp_required"
+                           name="is_rsvp_required" />
+                    <label class="form-check-label" for="is_rsvp_required">
+                      <i class="fas fa-hand-paper me-1"></i>
+                      Require RSVP
+                    </label>
+                    <div class="form-text">Ask attendees to confirm their attendance</div>
+                  </div>
+                </div>
+              </div>
+              <!-- Preview Section -->
+              <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="mb-0">
+                    <i class="fas fa-eye text-info me-1"></i> Preview
+                  </h6>
+                  <button type="button" class="btn btn-sm btn-outline-info" id="toggle-preview">
+                    <i class="fas fa-eye me-1"></i>Show Preview
+                  </button>
+                </div>
+                <div id="preview-container" style="display: none;">
+                  <div class="card border">
+                    <div class="card-header">
+                      <div class="d-flex align-items-center mb-2">
+                        <span class="badge bg-primary me-2" id="preview-type">Event Type</span>
+                        <span class="badge bg-warning me-2"
+                              id="preview-rsvp"
+                              style="display: none">RSVP Required</span>
+                      </div>
+                      <h5 class="mt-2 mb-0" id="preview-title">Event Title</h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="row mb-3">
+                        <div class="col-md-6">
+                          <strong>Date & Time:</strong>
+                          <br />
+                          <span id="preview-datetime">Not selected</span>
+                        </div>
+                        <div class="col-md-6">
+                          <strong>Location:</strong>
+                          <br />
+                          <span id="preview-location">Not specified</span>
+                        </div>
+                      </div>
+                      <div id="preview-description">Event description will appear here...</div>
+                      <div class="mt-3">
+                        <small class="text-muted">
+                          <i class="fas fa-user me-1"></i>
+                          Organizer: {{ user.get_full_name }}
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Form Actions -->
+              <div class="d-flex justify-content-between">
+                <a href="{% url 'backend:event_list' %}"
+                   class="btn btn-outline-secondary">
+                  <i class="fas fa-times me-2"></i>Cancel
+                </a>
+                <div>
+                  <button type="button" class="btn btn-outline-primary me-2" id="save-draft">
+                    <i class="fas fa-save me-2"></i>Save as Draft
+                  </button>
+                  <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-calendar-plus me-2"></i>Create Event
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      <!-- Sidebar -->
+      <div class="col-lg-4">
+        <!-- Guidelines Card -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-lightbulb text-warning me-2"></i> Event Guidelines
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="list-group list-group-flush">
+              <div class="list-group-item border-0 px-0">
+                <h6 class="text-primary mb-1">
+                  <i class="fas fa-check-circle me-1"></i> Planning Tips
+                </h6>
+                <ul class="small mb-0">
+                  <li>Choose appropriate date and time</li>
+                  <li>Provide clear location details</li>
+                  <li>Include all necessary information</li>
+                  <li>Set realistic capacity limits</li>
+                  <li>Enable RSVP for better planning</li>
+                </ul>
+              </div>
+              <div class="list-group-item border-0 px-0">
+                <h6 class="text-warning mb-1">
+                  <i class="fas fa-exclamation-triangle me-1"></i> Important Notes
+                </h6>
+                <ul class="small mb-0">
+                  <li>Events are visible to all residents</li>
+                  <li>RSVP helps track attendance</li>
+                  <li>Consider facility availability</li>
+                  <li>Plan for weather contingencies</li>
+                </ul>
+              </div>
+              <div class="list-group-item border-0 px-0">
+                <h6 class="text-info mb-1">
+                  <i class="fas fa-info-circle me-1"></i> Event Types
+                </h6>
+                <ul class="small mb-0">
+                  <li>Committee Meeting: Official meetings</li>
+                  <li>Maintenance Activity: Work sessions</li>
+                  <li>Social Event: Community gatherings</li>
+                  <li>Festival Celebration: Cultural events</li>
+                  <li>Other: Miscellaneous activities</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Quick Reference -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-book text-secondary me-2"></i> Quick Reference
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="list-group list-group-flush">
+              <div class="list-group-item border-0 px-0">
+                <h6 class="text-muted mb-1">Common Locations</h6>
+                <ul class="small mb-0">
+                  <li>Community Hall</li>
+                  <li>Garden/Park Area</li>
+                  <li>Swimming Pool</li>
+                  <li>Gymnasium</li>
+                  <li>Parking Area</li>
+                  <li>Lobby/Reception</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Quick Actions -->
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-link text-primary me-2"></i> Quick Actions
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="d-grid gap-2">
+              <a href="{% url 'backend:event_list' %}" class="btn btn-outline-primary">
+                <i class="fas fa-list me-2"></i>View All Events
+              </a>
+              <a href="{% url 'backend:booking_create' %}"
+                 class="btn btn-outline-success">
+                <i class="fas fa-calendar-plus me-2"></i>Book Facility
+              </a>
+              <a href="{% url 'backend:announcement_create' %}"
+                 class="btn btn-outline-info">
+                <i class="fas fa-bullhorn me-2"></i>Create Announcement
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- JavaScript for Enhanced Form Functionality -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('event-form');
+      const titleInput = document.getElementById('title');
+      const descriptionInput = document.getElementById('description');
+      const eventTypeSelect = document.getElementById('event_type');
+      const startDateTimeInput = document.getElementById('start_datetime');
+      const endDateTimeInput = document.getElementById('end_datetime');
+      const locationInput = document.getElementById('location');
+      const maxAttendeesInput = document.getElementById('max_attendees');
+      const isRsvpRequiredCheckbox = document.getElementById('is_rsvp_required');
+      const previewContainer = document.getElementById('preview-container');
+      const togglePreviewBtn = document.getElementById('toggle-preview');
+
+      // Preview elements
+      const previewTitle = document.getElementById('preview-title');
+      const previewDescription = document.getElementById('preview-description');
+      const previewType = document.getElementById('preview-type');
+      const previewRsvp = document.getElementById('preview-rsvp');
+      const previewDatetime = document.getElementById('preview-datetime');
+      const previewLocation = document.getElementById('preview-location');
+
+      // Set minimum datetime to current time
+      const now = new Date();
+      const minDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      startDateTimeInput.min = minDateTime;
+      endDateTimeInput.min = minDateTime;
+
+      // Toggle preview functionality
+      togglePreviewBtn.addEventListener('click', function() {
+        const isVisible = previewContainer.style.display !== 'none';
+        previewContainer.style.display = isVisible ? 'none' : 'block';
+        this.innerHTML = isVisible ?
+          '<i class="fas fa-eye me-1"></i>Show Preview' :
+          '<i class="fas fa-eye-slash me-1"></i>Hide Preview';
+      });
+
+      // Auto-update preview when form fields change
+      function updatePreview() {
+        // Update title
+        previewTitle.textContent = titleInput.value || 'Event Title';
+
+        // Update description
+        const description = descriptionInput.value || 'Event description will appear here...';
+        previewDescription.innerHTML = description.replace(/\n/g, '<br />');
+
+        // Update type
+        const selectedType = eventTypeSelect.options[eventTypeSelect.selectedIndex];
+        if (selectedType.value) {
+          previewType.textContent = selectedType.text;
+        } else {
+          previewType.textContent = 'Event Type';
+        }
+
+        // Update RSVP badge
+        previewRsvp.style.display = isRsvpRequiredCheckbox.checked ? 'inline-block' : 'none';
+
+        // Update datetime
+        if (startDateTimeInput.value && endDateTimeInput.value) {
+          const startDate = new Date(startDateTimeInput.value);
+          const endDate = new Date(endDateTimeInput.value);
+
+          const startStr = startDate.toLocaleDateString() + ' at ' + startDate.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+          const endStr = endDate.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+
+          previewDatetime.innerHTML = `${startStr}<br />to ${endStr}`;
+        } else {
+          previewDatetime.textContent = 'Not selected';
+        }
+
+        // Update location
+        previewLocation.textContent = locationInput.value || 'Not specified';
+      }
+
+      // Add event listeners for real-time preview updates
+      [titleInput, descriptionInput, eventTypeSelect, startDateTimeInput, endDateTimeInput, locationInput, isRsvpRequiredCheckbox]
+      .forEach(element => {
+        element.addEventListener('input', updatePreview);
+        element.addEventListener('change', updatePreview);
+      });
+
+      // Start datetime change handler
+      startDateTimeInput.addEventListener('change', function() {
+        if (this.value) {
+          // Set minimum end time to start time
+          endDateTimeInput.min = this.value;
+
+          // If end time is before start time, update it
+          if (endDateTimeInput.value && endDateTimeInput.value <= this.value) {
+            const startDate = new Date(this.value);
+            startDate.setHours(startDate.getHours() + 1);
+            endDateTimeInput.value = startDate.toISOString().slice(0, 16);
+          }
+        }
+        updatePreview();
+      });
+
+      // Form validation
+      form.addEventListener('submit', function(e) {
+        const title = titleInput.value.trim();
+        const description = descriptionInput.value.trim();
+        const eventType = eventTypeSelect.value;
+        const startDateTime = startDateTimeInput.value;
+        const endDateTime = endDateTimeInput.value;
+        const location = locationInput.value.trim();
+
+        if (!title || !description || !eventType || !startDateTime || !endDateTime || !location) {
+          e.preventDefault();
+          alert('Please fill in all required fields.');
+          return false;
+        }
+
+        // Validate datetime logic
+        if (new Date(endDateTime) <= new Date(startDateTime)) {
+          e.preventDefault();
+          alert('End date and time must be after start date and time.');
+          return false;
+        }
+
+        // Validate capacity
+        if (maxAttendeesInput.value && parseInt(maxAttendeesInput.value) < 1) {
+          e.preventDefault();
+          alert('Maximum attendees must be at least 1.');
+          return false;
+        }
+
+        // Show loading state
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating...';
+        submitBtn.disabled = true;
+      });
+
+      // Save draft functionality
+      document.getElementById('save-draft').addEventListener('click', function() {
+        // In a real implementation, you would save the form data as a draft
+        alert('Draft saved! (This is a placeholder - implement draft saving functionality)');
+      });
+
+      // Auto-save functionality (every 30 seconds)
+      let autoSaveTimeout;
+
+      function autoSave() {
+        const title = titleInput.value.trim();
+        const description = descriptionInput.value.trim();
+
+        if (title || description) {
+          // In a real implementation, you would save the form data
+          console.log('Auto-saving draft...');
+        }
+      }
+
+      [titleInput, descriptionInput].forEach(input => {
+        input.addEventListener('input', function() {
+          clearTimeout(autoSaveTimeout);
+          autoSaveTimeout = setTimeout(autoSave, 30000);
+        });
+      });
+
+      // Character count for description
+      const descriptionCharCount = document.createElement('div');
+      descriptionCharCount.className = 'form-text text-end';
+      descriptionInput.parentNode.appendChild(descriptionCharCount);
+
+      function updateCharCount() {
+        const count = descriptionInput.value.length;
+        descriptionCharCount.textContent = `${count} characters`;
+        descriptionCharCount.className = `form-text text-end ${count > 1000 ? 'text-warning' : ''}`;
+      }
+
+      descriptionInput.addEventListener('input', updateCharCount);
+      updateCharCount();
+
+      // Auto-update preview on page load
+      updatePreview();
+    });
+  </script>
+{% endblock %}

@@ -1,0 +1,291 @@
+{% load static i18n %}
+
+<!DOCTYPE html> {% get_current_language as LANGUAGE_CODE %}
+<html lang="{{ LANGUAGE_CODE }}">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <title>
+      {% block title %}
+        The Khaki Estate
+      {% endblock title %}
+    </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Website Of The Khaki Estate Housing" />
+    <meta name="author" content="Sanjay Singh" />
+    <link rel="icon" href="{% static 'images/favicons/favicon.ico' %}" />
+    {% block css %}
+      <!-- Latest compiled and minified Bootstrap CSS -->
+      <link rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.3/css/bootstrap.min.css"
+            integrity="sha512-SbiR/eusphKoMVVXysTKG/7VseWii+Y3FdHrt0EpKgpToZeemhqHeZeLWLhJutz/2ut2Vw1uQEj2MbRF+TVBUA=="
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer" />
+      <!-- Font Awesome Icons -->
+      <link rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+            integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer" />
+      <!-- Your stuff: Third-party CSS libraries go here -->
+      <!-- This file stores project-specific CSS -->
+      <link href="{% static 'css/project.css' %}" rel="stylesheet" />
+    {% endblock css %}
+    <!-- Le javascript
+    ================================================== -->
+    {# Placed at the top of the document so pages load faster with defer #}
+    {% block javascript %}
+      <!-- jQuery (required for Bootstrap 5 dropdowns and other components) -->
+      <!-- jQuery is loaded before Bootstrap to ensure proper functionality -->
+      <script defer
+              src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+              integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+              crossorigin="anonymous"
+              referrerpolicy="no-referrer"></script>
+      <!-- Popper.js (required for Bootstrap 5 dropdown positioning and tooltips) -->
+      <!-- Popper.js handles positioning calculations for dropdowns, tooltips, and popovers -->
+      <script defer
+              src="https://unpkg.com/@popperjs/core@2.11.8/dist/umd/popper.min.js"
+              crossorigin="anonymous"
+              referrerpolicy="no-referrer"></script>
+      <!-- Bootstrap JS -->
+      <!-- Bootstrap JS depends on jQuery and Popper.js for dropdown and other interactive components -->
+      <script defer
+              src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.2.3/js/bootstrap.min.js"
+              integrity="sha512-1/RvZTcCDEUjY/CypiMz+iqqtaoQfAITmNSJY17Myp4Ms5mdxPS5UV7iOfdZoxcGhzFbOm6sntTKJppjvuhg4g=="
+              crossorigin="anonymous"
+              referrerpolicy="no-referrer"></script>
+      <!-- Your stuff: Third-party javascript libraries go here -->
+      <!-- place project specific Javascript in this file -->
+      <script defer src="{% static 'js/project.js' %}"></script>
+    {% endblock javascript %}
+  </head>
+  <body class="{% block bodyclass %}{% endblock bodyclass %}">
+    {% block body %}
+      <div class="mb-1">
+        <nav class="navbar navbar-expand-md navbar-light bg-light">
+          <div class="container-fluid">
+            <button class="navbar-toggler navbar-toggler-right"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#navbarSupportedContent"
+                    aria-controls="navbarSupportedContent"
+                    aria-expanded="false"
+                    aria-label="Toggle navigation">
+              <span class="navbar-toggler-icon"></span>
+            </button>
+            <a class="navbar-brand" href="{% url 'home' %}">The Khaki Estate</a>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+              <ul class="navbar-nav mr-auto">
+                <!-- Basic navigation for all users -->
+                <li class="nav-item">
+                  <a class="nav-link" href="{% url 'home' %}">Home</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="{% url 'about' %}">About</a>
+                </li>
+                <!-- Authenticated user navigation -->
+                {% if request.user.is_authenticated %}
+                  <!-- Dashboard - Main hub for residents and committee -->
+                  <li class="nav-item">
+                    <a class="nav-link" href="{% url 'backend:dashboard' %}">
+                      <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                  </li>
+                  <!-- Communication Section -->
+                  <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle"
+                       href="#"
+                       id="communicationDropdown"
+                       role="button"
+                       data-bs-toggle="dropdown"
+                       aria-expanded="false">
+                      <i class="fas fa-bullhorn"></i> Communication
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="communicationDropdown">
+                      <li>
+                        <a class="dropdown-item" href="{% url 'backend:announcement_list' %}">
+                          <i class="fas fa-list"></i> Announcements
+                        </a>
+                      </li>
+                      {% if request.user.is_authenticated and request.user.resident.is_committee_member %}
+                        <li>
+                          <a class="dropdown-item" href="{% url 'backend:announcement_create' %}">
+                            <i class="fas fa-plus"></i> Create Announcement
+                          </a>
+                        </li>
+                      {% endif %}
+                    </ul>
+                  </li>
+                  <!-- Maintenance Section -->
+                  <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle"
+                       href="#"
+                       id="maintenanceDropdown"
+                       role="button"
+                       data-bs-toggle="dropdown"
+                       aria-expanded="false">
+                      <i class="fas fa-tools"></i> Maintenance
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="maintenanceDropdown">
+                      <li>
+                        <a class="dropdown-item" href="{% url 'backend:maintenance_list' %}">
+                          <i class="fas fa-list"></i> My Requests
+                        </a>
+                      </li>
+                      <li>
+                        <a class="dropdown-item" href="{% url 'backend:maintenance_create' %}">
+                          <i class="fas fa-plus"></i> Report Issue
+                        </a>
+                      </li>
+                    </ul>
+                  </li>
+                  <!-- Facility Booking Section -->
+                  <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle"
+                       href="#"
+                       id="bookingDropdown"
+                       role="button"
+                       data-bs-toggle="dropdown"
+                       aria-expanded="false">
+                      <i class="fas fa-calendar-alt"></i> Bookings
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="bookingDropdown">
+                      <li>
+                        <a class="dropdown-item" href="{% url 'backend:booking_list' %}">
+                          <i class="fas fa-list"></i> My Bookings
+                        </a>
+                      </li>
+                      <li>
+                        <a class="dropdown-item" href="{% url 'backend:booking_calendar' %}">
+                          <i class="fas fa-calendar"></i> Calendar View
+                        </a>
+                      </li>
+                      <li>
+                        <a class="dropdown-item" href="{% url 'backend:booking_create' %}">
+                          <i class="fas fa-plus"></i> Book Facility
+                        </a>
+                      </li>
+                    </ul>
+                  </li>
+                  <!-- Community Section -->
+                  <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle"
+                       href="#"
+                       id="communityDropdown"
+                       role="button"
+                       data-bs-toggle="dropdown"
+                       aria-expanded="false">
+                      <i class="fas fa-users"></i> Community
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="communityDropdown">
+                      <li>
+                        <a class="dropdown-item" href="{% url 'backend:event_list' %}">
+                          <i class="fas fa-calendar-check"></i> Events
+                        </a>
+                      </li>
+                      <li>
+                        <a class="dropdown-item" href="{% url 'backend:event_create' %}">
+                          <i class="fas fa-plus"></i> Create Event
+                        </a>
+                      </li>
+                      <li>
+                        <hr class="dropdown-divider" />
+                      </li>
+                      <li>
+                        <a class="dropdown-item" href="{% url 'backend:marketplace_list' %}">
+                          <i class="fas fa-store"></i> Marketplace
+                        </a>
+                      </li>
+                      <li>
+                        <a class="dropdown-item" href="{% url 'backend:marketplace_create' %}">
+                          <i class="fas fa-plus"></i> Post Item
+                        </a>
+                      </li>
+                    </ul>
+                  </li>
+                  <!-- User Profile and Account -->
+                  <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle"
+                       href="#"
+                       id="userDropdown"
+                       role="button"
+                       data-bs-toggle="dropdown"
+                       aria-expanded="false">
+                      <i class="fas fa-user"></i> {{ request.user.get_full_name|default:request.user.username }}
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="userDropdown">
+                      <li>
+                        <a class="dropdown-item"
+                           href="{% url 'users:detail' request.user.username %}">
+                          <i class="fas fa-user-circle"></i> My Profile
+                        </a>
+                      </li>
+                      <li>
+                        <a class="dropdown-item" href="{% url 'backend:get_notifications' %}">
+                          <i class="fas fa-bell"></i> Notifications
+                        </a>
+                      </li>
+                      <li>
+                        <hr class="dropdown-divider" />
+                      </li>
+                      <li>
+                        <a class="dropdown-item" href="{% url 'account_logout' %}">
+                          <i class="fas fa-sign-out-alt"></i> Sign Out
+                        </a>
+                      </li>
+                    </ul>
+                  </li>
+                {% else %}
+                  <!-- Non-authenticated user navigation -->
+                  {% if ACCOUNT_ALLOW_REGISTRATION %}
+                    <li class="nav-item">
+                      <a id="sign-up-link" class="nav-link" href="{% url 'account_signup' %}">
+                        <i class="fas fa-user-plus"></i> Sign Up
+                      </a>
+                    </li>
+                  {% endif %}
+                  <li class="nav-item">
+                    <a id="log-in-link" class="nav-link" href="{% url 'account_login' %}">
+                      <i class="fas fa-sign-in-alt"></i> Sign In
+                    </a>
+                  </li>
+                {% endif %}
+              </ul>
+            </div>
+          </div>
+        </nav>
+      </div>
+      <div class="container">
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-dismissible {% if message.tags %}alert-{{ message.tags }}{% endif %}">
+              {{ message }}
+              <button type="button"
+                      class="btn-close"
+                      data-bs-dismiss="alert"
+                      aria-label="Close"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+        {% block main %}
+          {% block content %}
+            <p>Use this document as a way to quick start any new project.</p>
+          {% endblock content %}
+        {% endblock main %}
+      </div>
+    {% endblock body %}
+    <!-- /container -->
+    {% block modal %}
+    {% endblock modal %}
+    {% block inline_javascript %}
+      {% comment %} Script tags with only code, no src (defer by default). To run with a "defer" so that you run inline code:
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        /* Run whatever you want */
+      });
+    </script>
+      {% endcomment %}
+    {% endblock inline_javascript %}
+  </body>
+</html>

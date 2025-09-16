@@ -1,0 +1,461 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block title %}Report Maintenance Issue - Housing Complex Management{% endblock %}
+{% block content %}
+  <div class="container-fluid">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{% url 'backend:dashboard' %}">Dashboard</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a href="{% url 'backend:maintenance_list' %}">Maintenance Requests</a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">Report New Issue</li>
+      </ol>
+    </nav>
+    <!-- Page Header -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h1 class="h3 mb-0">
+              <i class="fas fa-wrench text-primary me-2"></i> Report Maintenance Issue
+            </h1>
+            <p class="text-muted mb-0">Submit a detailed report for any maintenance issues in your flat or common areas</p>
+          </div>
+          <div>
+            <a href="{% url 'backend:maintenance_list' %}"
+               class="btn btn-outline-secondary">
+              <i class="fas fa-arrow-left me-2"></i>Back to Requests
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <!-- Main Form -->
+      <div class="col-lg-8">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-edit text-primary me-2"></i> Issue Details
+            </h5>
+          </div>
+          <div class="card-body">
+            <form method="post" enctype="multipart/form-data" id="maintenance-form">
+              {% csrf_token %}
+              <!-- Title Field -->
+              <div class="mb-4">
+                <label for="title" class="form-label">
+                  <i class="fas fa-heading me-1"></i>
+                  Issue Title <span class="text-danger">*</span>
+                </label>
+                <input type="text"
+                       class="form-control"
+                       id="title"
+                       name="title"
+                       placeholder="Brief description of the issue..."
+                       required />
+                <div class="form-text">Provide a clear, concise title for the maintenance issue</div>
+              </div>
+              <!-- Category Selection -->
+              <div class="mb-4">
+                <label for="category" class="form-label">
+                  <i class="fas fa-tags me-1"></i>
+                  Category <span class="text-danger">*</span>
+                </label>
+                <select class="form-select" id="category" name="category" required>
+                  <option value="">Select a category...</option>
+                  {% for category in categories %}
+                    <option value="{{ category.id }}"
+                            data-priority="{{ category.priority_level }}">{{ category.name }}</option>
+                  {% endfor %}
+                </select>
+                <div class="form-text">Choose the most appropriate category for your issue</div>
+              </div>
+              <!-- Location Field -->
+              <div class="mb-4">
+                <label for="location" class="form-label">
+                  <i class="fas fa-map-marker-alt me-1"></i>
+                  Location <span class="text-danger">*</span>
+                </label>
+                <input type="text"
+                       class="form-control"
+                       id="location"
+                       name="location"
+                       placeholder="e.g., Flat A-101, Common Area - Lobby, Parking Area..."
+                       required />
+                <div class="form-text">Specify the exact location where the issue is occurring</div>
+              </div>
+              <!-- Priority Selection -->
+              <div class="mb-4">
+                <label for="priority" class="form-label">
+                  <i class="fas fa-exclamation-triangle me-1"></i>
+                  Priority Level
+                </label>
+                <select class="form-select" id="priority" name="priority">
+                  <option value="2">Medium (Default)</option>
+                  <option value="1">Low - Minor issue, can wait</option>
+                  <option value="3">High - Significant issue, needs attention soon</option>
+                  <option value="4">Emergency - Immediate attention required</option>
+                </select>
+                <div class="form-text">
+                  <i class="fas fa-info-circle me-1"></i> Emergency priority should only be used for safety hazards or major disruptions
+                </div>
+              </div>
+              <!-- Description Field -->
+              <div class="mb-4">
+                <label for="description" class="form-label">
+                  <i class="fas fa-align-left me-1"></i>
+                  Detailed Description <span class="text-danger">*</span>
+                </label>
+                <textarea class="form-control"
+                          id="description"
+                          name="description"
+                          rows="6"
+                          placeholder="Provide a detailed description of the issue..."
+                          required></textarea>
+                <div class="form-text">
+                  <i class="fas fa-lightbulb me-1"></i> Include details like: when the issue started, what you've observed, any attempts to resolve it, etc.
+                </div>
+              </div>
+              <!-- Photo Upload -->
+              <div class="mb-4">
+                <label for="attachment" class="form-label">
+                  <i class="fas fa-camera me-1"></i>
+                  Photo Evidence (Optional)
+                </label>
+                <input type="file"
+                       class="form-control"
+                       id="attachment"
+                       name="attachment"
+                       accept="image/*"
+                       capture="environment" />
+                <div class="form-text">
+                  <i class="fas fa-info-circle me-1"></i> Photos help maintenance staff understand the issue better. Supported formats: JPG, PNG, GIF
+                </div>
+              </div>
+              <!-- Preview Section -->
+              <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="mb-0">
+                    <i class="fas fa-eye text-info me-1"></i> Preview
+                  </h6>
+                  <button type="button" class="btn btn-sm btn-outline-info" id="toggle-preview">
+                    <i class="fas fa-eye me-1"></i>Show Preview
+                  </button>
+                </div>
+                <div id="preview-container" style="display: none;">
+                  <div class="card border">
+                    <div class="card-header">
+                      <div class="d-flex align-items-center mb-2">
+                        <span class="badge bg-primary me-2" id="preview-category">Category</span>
+                        <span class="badge bg-info me-2" id="preview-priority">Priority</span>
+                      </div>
+                      <h5 class="mt-2 mb-0" id="preview-title">Issue Title</h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="row mb-3">
+                        <div class="col-md-6">
+                          <strong>Location:</strong> <span id="preview-location">Location</span>
+                        </div>
+                        <div class="col-md-6">
+                          <strong>Reported by:</strong> {{ user.get_full_name }}
+                        </div>
+                      </div>
+                      <div id="preview-description">Issue description will appear here...</div>
+                      <div id="preview-attachment" class="mt-3" style="display: none;">
+                        <i class="fas fa-camera text-muted me-1"></i>
+                        <small class="text-muted">Photo attached</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Form Actions -->
+              <div class="d-flex justify-content-between">
+                <a href="{% url 'backend:maintenance_list' %}"
+                   class="btn btn-outline-secondary">
+                  <i class="fas fa-times me-2"></i>Cancel
+                </a>
+                <div>
+                  <button type="button" class="btn btn-outline-primary me-2" id="save-draft">
+                    <i class="fas fa-save me-2"></i>Save as Draft
+                  </button>
+                  <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane me-2"></i>Submit Request
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      <!-- Sidebar -->
+      <div class="col-lg-4">
+        <!-- Guidelines Card -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-lightbulb text-warning me-2"></i> Reporting Guidelines
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="list-group list-group-flush">
+              <div class="list-group-item border-0 px-0">
+                <h6 class="text-primary mb-1">
+                  <i class="fas fa-check-circle me-1"></i> Before Reporting
+                </h6>
+                <ul class="small mb-0">
+                  <li>Check if it's a simple fix you can handle</li>
+                  <li>Take photos if safe to do so</li>
+                  <li>Note when the issue started</li>
+                  <li>Check if it affects other residents</li>
+                </ul>
+              </div>
+              <div class="list-group-item border-0 px-0">
+                <h6 class="text-warning mb-1">
+                  <i class="fas fa-exclamation-triangle me-1"></i> Emergency Issues
+                </h6>
+                <ul class="small mb-0">
+                  <li>Gas leaks or electrical hazards</li>
+                  <li>Water flooding or major leaks</li>
+                  <li>Security breaches or break-ins</li>
+                  <li>Fire hazards or smoke</li>
+                </ul>
+              </div>
+              <div class="list-group-item border-0 px-0">
+                <h6 class="text-info mb-1">
+                  <i class="fas fa-info-circle me-1"></i> Response Times
+                </h6>
+                <ul class="small mb-0">
+                  <li>Emergency: Within 2 hours</li>
+                  <li>High Priority: Within 24 hours</li>
+                  <li>Medium Priority: Within 3 days</li>
+                  <li>Low Priority: Within 1 week</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Quick Reference -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-book text-secondary me-2"></i> Quick Reference
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="list-group list-group-flush">
+              <div class="list-group-item border-0 px-0">
+                <h6 class="text-muted mb-1">Common Categories</h6>
+                <ul class="small mb-0">
+                  <li>Plumbing (leaks, clogs, water pressure)</li>
+                  <li>Electrical (outlets, switches, lighting)</li>
+                  <li>HVAC (heating, cooling, ventilation)</li>
+                  <li>Structural (doors, windows, walls)</li>
+                  <li>Common Areas (lobby, parking, garden)</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Contact Information -->
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-phone text-success me-2"></i> Emergency Contacts
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="list-group list-group-flush">
+              <div class="list-group-item border-0 px-0">
+                <h6 class="text-danger mb-1">Emergency Services</h6>
+                <p class="small mb-1">Call 100 for police, 101 for fire, 102 for ambulance</p>
+              </div>
+              <div class="list-group-item border-0 px-0">
+                <h6 class="text-warning mb-1">Maintenance Emergency</h6>
+                <p class="small mb-1">Contact building management immediately</p>
+              </div>
+              <div class="list-group-item border-0 px-0">
+                <h6 class="text-info mb-1">Non-Emergency</h6>
+                <p class="small mb-0">Use this form for routine maintenance requests</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- JavaScript for Enhanced Form Functionality -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('maintenance-form');
+      const titleInput = document.getElementById('title');
+      const descriptionInput = document.getElementById('description');
+      const categorySelect = document.getElementById('category');
+      const prioritySelect = document.getElementById('priority');
+      const locationInput = document.getElementById('location');
+      const attachmentInput = document.getElementById('attachment');
+      const previewContainer = document.getElementById('preview-container');
+      const togglePreviewBtn = document.getElementById('toggle-preview');
+
+      // Preview elements
+      const previewTitle = document.getElementById('preview-title');
+      const previewDescription = document.getElementById('preview-description');
+      const previewCategory = document.getElementById('preview-category');
+      const previewPriority = document.getElementById('preview-priority');
+      const previewLocation = document.getElementById('preview-location');
+      const previewAttachment = document.getElementById('preview-attachment');
+
+      // Toggle preview functionality
+      togglePreviewBtn.addEventListener('click', function() {
+        const isVisible = previewContainer.style.display !== 'none';
+        previewContainer.style.display = isVisible ? 'none' : 'block';
+        this.innerHTML = isVisible ?
+          '<i class="fas fa-eye me-1"></i>Show Preview' :
+          '<i class="fas fa-eye-slash me-1"></i>Hide Preview';
+      });
+
+      // Auto-update preview when form fields change
+      function updatePreview() {
+        // Update title
+        previewTitle.textContent = titleInput.value || 'Issue Title';
+
+        // Update description
+        const description = descriptionInput.value || 'Issue description will appear here...';
+        previewDescription.innerHTML = description.replace(/\n/g, '<br />');
+
+        // Update category
+        const selectedCategory = categorySelect.options[categorySelect.selectedIndex];
+        if (selectedCategory.value) {
+          previewCategory.textContent = selectedCategory.text;
+        } else {
+          previewCategory.textContent = 'Category';
+        }
+
+        // Update priority
+        const selectedPriority = prioritySelect.options[prioritySelect.selectedIndex];
+        previewPriority.textContent = selectedPriority.text;
+
+        // Update location
+        previewLocation.textContent = locationInput.value || 'Location';
+
+        // Update attachment indicator
+        previewAttachment.style.display = attachmentInput.files.length > 0 ? 'block' : 'none';
+      }
+
+      // Add event listeners for real-time preview updates
+      [titleInput, descriptionInput, categorySelect, prioritySelect, locationInput, attachmentInput]
+      .forEach(element => {
+        element.addEventListener('input', updatePreview);
+        element.addEventListener('change', updatePreview);
+      });
+
+      // Category change handler for auto-setting priority
+      categorySelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        if (selectedOption.dataset.priority) {
+          prioritySelect.value = selectedOption.dataset.priority;
+        }
+      });
+
+      // Form validation
+      form.addEventListener('submit', function(e) {
+        const title = titleInput.value.trim();
+        const description = descriptionInput.value.trim();
+        const category = categorySelect.value;
+        const location = locationInput.value.trim();
+
+        if (!title || !description || !category || !location) {
+          e.preventDefault();
+          alert('Please fill in all required fields (Title, Description, Category, and Location).');
+          return false;
+        }
+
+        // Confirm emergency priority
+        if (prioritySelect.value === '4') {
+          const confirmed = confirm('Are you sure this is an emergency? Emergency requests require immediate attention and should only be used for safety hazards or major disruptions.');
+          if (!confirmed) {
+            e.preventDefault();
+            return false;
+          }
+        }
+
+        // Show loading state
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Submitting...';
+        submitBtn.disabled = true;
+      });
+
+      // Save draft functionality
+      document.getElementById('save-draft').addEventListener('click', function() {
+        // In a real implementation, you would save the form data as a draft
+        alert('Draft saved! (This is a placeholder - implement draft saving functionality)');
+      });
+
+      // Auto-save functionality (every 30 seconds)
+      let autoSaveTimeout;
+
+      function autoSave() {
+        const title = titleInput.value.trim();
+        const description = descriptionInput.value.trim();
+
+        if (title || description) {
+          // In a real implementation, you would save the form data
+          console.log('Auto-saving draft...');
+        }
+      }
+
+      [titleInput, descriptionInput].forEach(input => {
+        input.addEventListener('input', function() {
+          clearTimeout(autoSaveTimeout);
+          autoSaveTimeout = setTimeout(autoSave, 30000);
+        });
+      });
+
+      // Character count for description
+      const descriptionCharCount = document.createElement('div');
+      descriptionCharCount.className = 'form-text text-end';
+      descriptionInput.parentNode.appendChild(descriptionCharCount);
+
+      function updateCharCount() {
+        const count = descriptionInput.value.length;
+        descriptionCharCount.textContent = `${count} characters`;
+        descriptionCharCount.className = `form-text text-end ${count > 1000 ? 'text-warning' : ''}`;
+      }
+
+      descriptionInput.addEventListener('input', updateCharCount);
+      updateCharCount();
+
+      // Image preview for attachment
+      attachmentInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            // Create image preview
+            let preview = document.getElementById('image-preview');
+            if (!preview) {
+              preview = document.createElement('div');
+              preview.id = 'image-preview';
+              preview.className = 'mt-2';
+              attachmentInput.parentNode.appendChild(preview);
+            }
+            preview.innerHTML = `
+                    <img src="${e.target.result}" alt="Preview" class="img-thumbnail" style="max-width: 200px; max-height: 200px;" />
+                    <div class="mt-1">
+                        <small class="text-muted">${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)</small>
+                    </div>
+                `;
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    });
+  </script>
+{% endblock %}

@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block title %}{{ booking.booking_number }} - Booking Details{% endblock %}
+{% block content %}
+  <div class="container-fluid">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{% url 'backend:dashboard' %}">Dashboard</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a href="{% url 'backend:booking_list' %}">Facility Bookings</a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">{{ booking.booking_number }}</li>
+      </ol>
+    </nav>
+    <div class="row">
+      <!-- Main Content -->
+      <div class="col-lg-8">
+        <!-- Booking Details Card -->
+        <div class="card">
+          <!-- Card Header -->
+          <div class="card-header">
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="flex-grow-1">
+                <div class="d-flex align-items-center mb-2">
+                  <span class="badge bg-{% if booking.status == 'confirmed' %}success{% elif booking.status == 'pending' %}warning{% elif booking.status == 'cancelled' %}danger{% else %}secondary{% endif %} me-2">
+                    {{ booking.get_status_display }}
+                  </span>
+                  {% if booking.total_fee > 0 %}<span class="badge bg-info">₹{{ booking.total_fee }}</span>{% endif %}
+                </div>
+                <h1 class="h4 mb-0">{{ booking.booking_number }}</h1>
+                <h5 class="text-muted mb-0">{{ booking.common_area.name }}</h5>
+              </div>
+              <div class="text-end">
+                {% if can_manage %}
+                  <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle"
+                            type="button"
+                            data-bs-toggle="dropdown">
+                      <i class="fas fa-cog me-1"></i>Manage
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li>
+                        <a class="dropdown-item"
+                           href="#"
+                           data-bs-toggle="modal"
+                           data-bs-target="#statusModal">
+                          <i class="fas fa-edit me-2"></i>Update Status
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <!-- Card Body -->
+          <div class="card-body">
+            <!-- Booking Purpose -->
+            <div class="mb-4">
+              <h6 class="text-muted mb-2">Purpose</h6>
+              <p>{{ booking.purpose|linebreaks }}</p>
+            </div>
+            <!-- Booking Details Grid -->
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <div class="border rounded p-3">
+                  <h6 class="text-muted mb-2">
+                    <i class="fas fa-calendar me-1"></i>Date & Time
+                  </h6>
+                  <p class="mb-1">
+                    <strong>{{ booking.booking_date|date:"l, F d, Y" }}</strong>
+                  </p>
+                  <p class="mb-0">{{ booking.start_time|time:"g:i A" }} - {{ booking.end_time|time:"g:i A" }}</p>
+                  <small class="text-muted">Duration: {{ booking.start_time|timesince:booking.end_time }}</small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="border rounded p-3">
+                  <h6 class="text-muted mb-2">
+                    <i class="fas fa-users me-1"></i>Attendance
+                  </h6>
+                  <p class="mb-1">
+                    <strong>{{ booking.guests_count|add:"1" }} people</strong>
+                  </p>
+                  <small class="text-muted">
+                    {% if booking.guests_count > 0 %}
+                      {{ booking.guests_count }} guest{{ booking.guests_count|pluralize }} + resident
+                    {% else %}
+                      Resident only
+                    {% endif %}
+                  </small>
+                </div>
+              </div>
+            </div>
+            <!-- Payment Information -->
+            {% if booking.total_fee > 0 %}
+              <div class="mb-4">
+                <div class="border rounded p-3 bg-light">
+                  <h6 class="text-muted mb-2">
+                    <i class="fas fa-credit-card me-1"></i>Payment Information
+                  </h6>
+                  <div class="row align-items-center">
+                    <div class="col-md-6">
+                      <div class="h5 text-success mb-0">₹{{ booking.total_fee }}</div>
+                      <small class="text-muted">Total Booking Fee</small>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                      {% if booking.is_paid %}
+                        <span class="badge bg-success">Paid</span>
+                      {% else %}
+                        <span class="badge bg-warning">Payment Pending</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            {% endif %}
+            <!-- Resident Information -->
+            <div class="mb-4">
+              <div class="border rounded p-3">
+                <h6 class="text-muted mb-2">
+                  <i class="fas fa-user me-1"></i>Resident Information
+                </h6>
+                <div class="d-flex align-items-center">
+                  <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3"
+                       style="width: 40px;
+                              height: 40px">
+                    {{ booking.resident.first_name|first|upper }}{{ booking.resident.last_name|first|upper }}
+                  </div>
+                  <div>
+                    <div class="fw-bold">{{ booking.resident.get_full_name }}</div>
+                    <small class="text-muted">Flat {{ booking.resident.flat_number }}</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Timestamps -->
+            <div class="border-top pt-3">
+              <div class="row">
+                <div class="col-md-6">
+                  <small class="text-muted">
+                    <i class="fas fa-calendar me-1"></i>
+                    <strong>Booked:</strong> {{ booking.created_at|date:"F d, Y \a\t g:i A" }}
+                  </small>
+                </div>
+                <div class="col-md-6">
+                  <small class="text-muted">
+                    <i class="fas fa-edit me-1"></i>
+                    <strong>Last Updated:</strong> {{ booking.updated_at|date:"F d, Y \a\t g:i A" }}
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Sidebar -->
+      <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-cog text-secondary me-2"></i> Quick Actions
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="d-grid gap-2">
+              <a href="{% url 'backend:booking_list' %}"
+                 class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Bookings
+              </a>
+              <a href="{% url 'backend:booking_calendar' %}"
+                 class="btn btn-outline-info">
+                <i class="fas fa-calendar-alt me-2"></i>Calendar View
+              </a>
+              {% if can_manage %}
+                <button class="btn btn-outline-warning"
+                        data-bs-toggle="modal"
+                        data-bs-target="#statusModal">
+                  <i class="fas fa-edit me-2"></i>Update Status
+                </button>
+              {% endif %}
+              <button class="btn btn-outline-secondary" onclick="window.print()">
+                <i class="fas fa-print me-2"></i>Print Details
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Booking Statistics -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-chart-bar text-info me-2"></i> Booking Info
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row text-center">
+              <div class="col-6 mb-3">
+                <div class="border rounded p-3">
+                  <div class="h5 mb-0 text-primary">
+                    {% if booking.booking_date > today %}
+                      {{ booking.booking_date|timeuntil }}
+                    {% else %}
+                      Past
+                    {% endif %}
+                  </div>
+                  <small class="text-muted">Time Until Event</small>
+                </div>
+              </div>
+              <div class="col-6 mb-3">
+                <div class="border rounded p-3">
+                  <div class="h5 mb-0 text-success">{{ booking.guests_count|add:"1" }}</div>
+                  <small class="text-muted">Total People</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Facility Information -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-building text-primary me-2"></i> Facility Details
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="list-group list-group-flush">
+              <div class="list-group-item border-0 px-0">
+                <h6 class="mb-1">{{ booking.common_area.name }}</h6>
+                <small class="text-muted">{{ booking.common_area.description|truncatewords:10 }}</small>
+              </div>
+              <div class="list-group-item border-0 px-0">
+                <small class="text-muted">Capacity:</small>
+                <br />
+                {{ booking.common_area.capacity }} people
+              </div>
+              <div class="list-group-item border-0 px-0">
+                <small class="text-muted">Booking Fee:</small>
+                <br />
+                ₹{{ booking.common_area.booking_fee }}/hour
+              </div>
+              <div class="list-group-item border-0 px-0">
+                <small class="text-muted">Available Hours:</small>
+                <br />
+                {{ booking.common_area.available_start_time }} - {{ booking.common_area.available_end_time }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Contact Information -->
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-phone text-success me-2"></i> Contact Info
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="list-group list-group-flush">
+              <div class="list-group-item border-0 px-0">
+                <h6 class="mb-1">{{ booking.resident.get_full_name }}</h6>
+                <small class="text-muted">Flat {{ booking.resident.flat_number }}</small>
+              </div>
+              <div class="list-group-item border-0 px-0">
+                <i class="fas fa-phone text-muted me-2"></i>
+                <a href="tel:{{ booking.resident.phone_number }}"
+                   class="text-decoration-none">{{ booking.resident.phone_number }}</a>
+              </div>
+              {% if booking.resident.alternate_phone %}
+                <div class="list-group-item border-0 px-0">
+                  <i class="fas fa-phone text-muted me-2"></i>
+                  <a href="tel:{{ booking.resident.alternate_phone }}"
+                     class="text-decoration-none">{{ booking.resident.alternate_phone }}</a>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Status Update Modal -->
+  <div class="modal fade" id="statusModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Update Booking Status</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="status-form">
+          {% csrf_token %}
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="new-status" class="form-label">New Status</label>
+              <select class="form-select" id="new-status" name="status" required>
+                <option value="">Select status...</option>
+                <option value="pending"
+                        {% if booking.status == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="confirmed"
+                        {% if booking.status == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                <option value="cancelled"
+                        {% if booking.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                <option value="completed"
+                        {% if booking.status == 'completed' %}selected{% endif %}>Completed</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Update Status</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <!-- JavaScript for Interactive Features -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Status form submission
+      const statusForm = document.getElementById('status-form');
+      if (statusForm) {
+        statusForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+
+          const formData = new FormData(this);
+
+          fetch('{% url "backend:update_booking_status" booking.id %}', {
+              method: 'POST',
+              body: formData,
+              headers: {
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+              }
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.status === 'success') {
+                location.reload();
+              } else {
+                alert('Error: ' + data.message);
+              }
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              alert('An error occurred while updating the status.');
+            });
+        });
+      }
+
+      // Add hover effects for cards
+      const cards = document.querySelectorAll('.card');
+      cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+          this.style.transform = 'translateY(-2px)';
+          this.style.transition = 'transform 0.2s ease';
+        });
+
+        card.addEventListener('mouseleave', function() {
+          this.style.transform = 'translateY(0)';
+        });
+      });
+
+      // Print functionality
+      window.print = function() {
+        window.print();
+      };
+
+      // Auto-refresh if booking is pending
+      {
+        %
+        if booking.status == 'pending' %
+      }
+      setInterval(function() {
+        // In a real implementation, you would check for status updates
+        console.log('Checking for status updates...');
+      }, 30000); // Check every 30 seconds
+      {
+        % endif %
+      }
+    });
+  </script>
+{% endblock %}

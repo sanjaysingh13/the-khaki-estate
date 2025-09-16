@@ -1,0 +1,538 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block title %}Post Marketplace Item - Housing Complex Management{% endblock %}
+{% block content %}
+  <div class="container-fluid">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb" class="mb-4">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{% url 'backend:dashboard' %}">Dashboard</a>
+        </li>
+        <li class="breadcrumb-item">
+          <a href="{% url 'backend:marketplace_list' %}">Marketplace</a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">Post New Item</li>
+      </ol>
+    </nav>
+    <!-- Page Header -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h1 class="h3 mb-0">
+              <i class="fas fa-store text-primary me-2"></i> Post Marketplace Item
+            </h1>
+            <p class="text-muted mb-0">Share items with your neighbors - buy, sell, or exchange</p>
+          </div>
+          <div>
+            <a href="{% url 'backend:marketplace_list' %}"
+               class="btn btn-outline-secondary">
+              <i class="fas fa-arrow-left me-2"></i>Back to Marketplace
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <!-- Main Form -->
+      <div class="col-lg-8">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-edit text-primary me-2"></i> Item Details
+            </h5>
+          </div>
+          <div class="card-body">
+            <form method="post" enctype="multipart/form-data" id="marketplace-form">
+              {% csrf_token %}
+              <!-- Title Field -->
+              <div class="mb-4">
+                <label for="title" class="form-label">
+                  <i class="fas fa-heading me-1"></i>
+                  Item Title <span class="text-danger">*</span>
+                </label>
+                <input type="text"
+                       class="form-control"
+                       id="title"
+                       name="title"
+                       placeholder="Enter a descriptive title for your item..."
+                       required />
+                <div class="form-text">Make it clear and descriptive to attract buyers</div>
+              </div>
+              <!-- Item Type Selection -->
+              <div class="mb-4">
+                <label for="item_type" class="form-label">
+                  <i class="fas fa-tags me-1"></i>
+                  Item Type <span class="text-danger">*</span>
+                </label>
+                <select class="form-select" id="item_type" name="item_type" required>
+                  <option value="">Select item type...</option>
+                  {% for type_code, type_name in item_types %}<option value="{{ type_code }}">{{ type_name }}</option>{% endfor %}
+                </select>
+                <div class="form-text">Choose the most appropriate category for your item</div>
+              </div>
+              <!-- Description Field -->
+              <div class="mb-4">
+                <label for="description" class="form-label">
+                  <i class="fas fa-align-left me-1"></i>
+                  Description <span class="text-danger">*</span>
+                </label>
+                <textarea class="form-control"
+                          id="description"
+                          name="description"
+                          rows="5"
+                          placeholder="Describe your item in detail..."
+                          required></textarea>
+                <div class="form-text">
+                  <i class="fas fa-lightbulb me-1"></i> Include details like: condition, age, reason for selling, any defects, etc.
+                </div>
+              </div>
+              <!-- Price Field -->
+              <div class="mb-4">
+                <label for="price" class="form-label">
+                  <i class="fas fa-rupee-sign me-1"></i>
+                  Price (Optional)
+                </label>
+                <div class="input-group">
+                  <span class="input-group-text">₹</span>
+                  <input type="number"
+                         class="form-control"
+                         id="price"
+                         name="price"
+                         min="0"
+                         step="0.01"
+                         placeholder="Enter price or leave blank for free" />
+                </div>
+                <div class="form-text">Leave blank if giving away for free or if price is negotiable</div>
+              </div>
+              <!-- Contact Information -->
+              <div class="mb-4">
+                <label for="contact_phone" class="form-label">
+                  <i class="fas fa-phone me-1"></i>
+                  Contact Phone Number
+                </label>
+                <input type="tel"
+                       class="form-control"
+                       id="contact_phone"
+                       name="contact_phone"
+                       placeholder="Your phone number for contact"
+                       value="{{ user.phone_number }}" />
+                <div class="form-text">This will be displayed to potential buyers</div>
+              </div>
+              <!-- Expiry Days -->
+              <div class="mb-4">
+                <label for="expires_days" class="form-label">
+                  <i class="fas fa-clock me-1"></i>
+                  Listing Duration
+                </label>
+                <select class="form-select" id="expires_days" name="expires_days">
+                  <option value="7">7 days</option>
+                  <option value="14">14 days</option>
+                  <option value="30" selected>30 days</option>
+                  <option value="60">60 days</option>
+                  <option value="90">90 days</option>
+                </select>
+                <div class="form-text">How long should this listing remain active?</div>
+              </div>
+              <!-- Image Uploads -->
+              <div class="mb-4">
+                <label class="form-label">
+                  <i class="fas fa-camera me-1"></i>
+                  Item Photos (Optional)
+                </label>
+                <div class="row">
+                  <div class="col-md-4 mb-3">
+                    <label for="image1" class="form-label">Photo 1</label>
+                    <input type="file"
+                           class="form-control"
+                           id="image1"
+                           name="image1"
+                           accept="image/*"
+                           capture="environment" />
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="image2" class="form-label">Photo 2</label>
+                    <input type="file"
+                           class="form-control"
+                           id="image2"
+                           name="image2"
+                           accept="image/*"
+                           capture="environment" />
+                  </div>
+                  <div class="col-md-4 mb-3">
+                    <label for="image3" class="form-label">Photo 3</label>
+                    <input type="file"
+                           class="form-control"
+                           id="image3"
+                           name="image3"
+                           accept="image/*"
+                           capture="environment" />
+                  </div>
+                </div>
+                <div class="form-text">
+                  <i class="fas fa-info-circle me-1"></i> Photos help attract buyers. Supported formats: JPG, PNG, GIF. Maximum 3 photos.
+                </div>
+              </div>
+              <!-- Preview Section -->
+              <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="mb-0">
+                    <i class="fas fa-eye text-info me-1"></i> Preview
+                  </h6>
+                  <button type="button" class="btn btn-sm btn-outline-info" id="toggle-preview">
+                    <i class="fas fa-eye me-1"></i>Show Preview
+                  </button>
+                </div>
+                <div id="preview-container" style="display: none;">
+                  <div class="card border">
+                    <div class="card-header">
+                      <div class="d-flex align-items-center mb-2">
+                        <span class="badge bg-primary me-2" id="preview-type">Item Type</span>
+                      </div>
+                      <h5 class="mt-2 mb-0" id="preview-title">Item Title</h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="row mb-3">
+                        <div class="col-md-6">
+                          <strong>Price:</strong> <span id="preview-price">Not specified</span>
+                        </div>
+                        <div class="col-md-6">
+                          <strong>Contact:</strong> <span id="preview-contact">{{ user.phone_number }}</span>
+                        </div>
+                      </div>
+                      <div id="preview-description">Item description will appear here...</div>
+                      <div id="preview-images" class="mt-3" style="display: none;">
+                        <i class="fas fa-camera text-muted me-1"></i>
+                        <small class="text-muted">Photos attached</small>
+                      </div>
+                      <div class="mt-2">
+                        <small class="text-muted">
+                          <i class="fas fa-clock me-1"></i>
+                          Expires: <span id="preview-expiry"></span>
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Form Actions -->
+              <div class="d-flex justify-content-between">
+                <a href="{% url 'backend:marketplace_list' %}"
+                   class="btn btn-outline-secondary">
+                  <i class="fas fa-times me-2"></i>Cancel
+                </a>
+                <div>
+                  <button type="button" class="btn btn-outline-primary me-2" id="save-draft">
+                    <i class="fas fa-save me-2"></i>Save as Draft
+                  </button>
+                  <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane me-2"></i>Post Item
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      <!-- Sidebar -->
+      <div class="col-lg-4">
+        <!-- Guidelines Card -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-lightbulb text-warning me-2"></i> Posting Guidelines
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="list-group list-group-flush">
+              <div class="list-group-item border-0 px-0">
+                <h6 class="text-primary mb-1">
+                  <i class="fas fa-check-circle me-1"></i> Best Practices
+                </h6>
+                <ul class="small mb-0">
+                  <li>Use clear, descriptive titles</li>
+                  <li>Include detailed descriptions</li>
+                  <li>Add high-quality photos</li>
+                  <li>Set reasonable prices</li>
+                  <li>Be honest about condition</li>
+                </ul>
+              </div>
+              <div class="list-group-item border-0 px-0">
+                <h6 class="text-warning mb-1">
+                  <i class="fas fa-exclamation-triangle me-1"></i> Prohibited Items
+                </h6>
+                <ul class="small mb-0">
+                  <li>Illegal or restricted items</li>
+                  <li>Dangerous materials</li>
+                  <li>Counterfeit goods</li>
+                  <li>Adult content</li>
+                  <li>Spam or irrelevant posts</li>
+                </ul>
+              </div>
+              <div class="list-group-item border-0 px-0">
+                <h6 class="text-info mb-1">
+                  <i class="fas fa-info-circle me-1"></i> Safety Tips
+                </h6>
+                <ul class="small mb-0">
+                  <li>Meet in public areas</li>
+                  <li>Bring a friend if possible</li>
+                  <li>Verify item condition</li>
+                  <li>Use secure payment methods</li>
+                  <li>Trust your instincts</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Item Types Reference -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-book text-secondary me-2"></i> Item Types
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="list-group list-group-flush">
+              {% for type_code, type_name in item_types %}
+                <div class="list-group-item border-0 px-0">
+                  <h6 class="text-muted mb-1">{{ type_name }}</h6>
+                  <small class="text-muted">
+                    {% if type_code == 'sell' %}
+                      Items you want to sell
+                    {% elif type_code == 'buy' %}
+                      Items you're looking to buy
+                    {% elif type_code == 'service' %}
+                      Services you can provide
+                    {% elif type_code == 'need_service' %}
+                      Services you need
+                    {% elif type_code == 'lost' %}
+                      Items you've lost
+                    {% elif type_code == 'found' %}
+                      Items you've found
+                    {% endif %}
+                  </small>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        <!-- Quick Actions -->
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-link text-primary me-2"></i> Quick Actions
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="d-grid gap-2">
+              <a href="{% url 'backend:marketplace_list' %}"
+                 class="btn btn-outline-primary">
+                <i class="fas fa-list me-2"></i>Browse Items
+              </a>
+              <a href="{% url 'backend:marketplace_list' %}?type=sell"
+                 class="btn btn-outline-success">
+                <i class="fas fa-shopping-cart me-2"></i>Items for Sale
+              </a>
+              <a href="{% url 'backend:marketplace_list' %}?type=service"
+                 class="btn btn-outline-info">
+                <i class="fas fa-tools me-2"></i>Services
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- JavaScript for Enhanced Form Functionality -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('marketplace-form');
+      const titleInput = document.getElementById('title');
+      const descriptionInput = document.getElementById('description');
+      const itemTypeSelect = document.getElementById('item_type');
+      const priceInput = document.getElementById('price');
+      const contactPhoneInput = document.getElementById('contact_phone');
+      const expiresDaysSelect = document.getElementById('expires_days');
+      const imageInputs = document.querySelectorAll('input[type="file"]');
+      const previewContainer = document.getElementById('preview-container');
+      const togglePreviewBtn = document.getElementById('toggle-preview');
+
+      // Preview elements
+      const previewTitle = document.getElementById('preview-title');
+      const previewDescription = document.getElementById('preview-description');
+      const previewType = document.getElementById('preview-type');
+      const previewPrice = document.getElementById('preview-price');
+      const previewContact = document.getElementById('preview-contact');
+      const previewImages = document.getElementById('preview-images');
+      const previewExpiry = document.getElementById('preview-expiry');
+
+      // Toggle preview functionality
+      togglePreviewBtn.addEventListener('click', function() {
+        const isVisible = previewContainer.style.display !== 'none';
+        previewContainer.style.display = isVisible ? 'none' : 'block';
+        this.innerHTML = isVisible ?
+          '<i class="fas fa-eye me-1"></i>Show Preview' :
+          '<i class="fas fa-eye-slash me-1"></i>Hide Preview';
+      });
+
+      // Auto-update preview when form fields change
+      function updatePreview() {
+        // Update title
+        previewTitle.textContent = titleInput.value || 'Item Title';
+
+        // Update description
+        const description = descriptionInput.value || 'Item description will appear here...';
+        previewDescription.innerHTML = description.replace(/\n/g, '<br />');
+
+        // Update type
+        const selectedType = itemTypeSelect.options[itemTypeSelect.selectedIndex];
+        if (selectedType.value) {
+          previewType.textContent = selectedType.text;
+        } else {
+          previewType.textContent = 'Item Type';
+        }
+
+        // Update price
+        if (priceInput.value) {
+          previewPrice.textContent = `₹${priceInput.value}`;
+        } else {
+          previewPrice.textContent = 'Not specified';
+        }
+
+        // Update contact
+        previewContact.textContent = contactPhoneInput.value || '{{ user.phone_number }}';
+
+        // Update images indicator
+        const hasImages = Array.from(imageInputs).some(input => input.files.length > 0);
+        previewImages.style.display = hasImages ? 'block' : 'none';
+
+        // Update expiry
+        const days = parseInt(expiresDaysSelect.value);
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + days);
+        previewExpiry.textContent = expiryDate.toLocaleDateString();
+      }
+
+      // Add event listeners for real-time preview updates
+      [titleInput, descriptionInput, itemTypeSelect, priceInput, contactPhoneInput, expiresDaysSelect]
+      .forEach(element => {
+        element.addEventListener('input', updatePreview);
+        element.addEventListener('change', updatePreview);
+      });
+
+      // Image input handlers
+      imageInputs.forEach(input => {
+        input.addEventListener('change', function(e) {
+          updatePreview();
+
+          // Show image preview
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              // Create image preview
+              let preview = document.getElementById(`preview-${this.id}`);
+              if (!preview) {
+                preview = document.createElement('div');
+                preview.id = `preview-${this.id}`;
+                preview.className = 'mt-2';
+                this.parentNode.appendChild(preview);
+              }
+              preview.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview" class="img-thumbnail" style="max-width: 150px; max-height: 150px;" />
+                        <div class="mt-1">
+                            <small class="text-muted">${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)</small>
+                        </div>
+                    `;
+            };
+            reader.readAsDataURL(file);
+          }
+        });
+      });
+
+      // Form validation
+      form.addEventListener('submit', function(e) {
+        const title = titleInput.value.trim();
+        const description = descriptionInput.value.trim();
+        const itemType = itemTypeSelect.value;
+
+        if (!title || !description || !itemType) {
+          e.preventDefault();
+          alert('Please fill in all required fields (Title, Description, and Item Type).');
+          return false;
+        }
+
+        // Validate price if provided
+        if (priceInput.value && parseFloat(priceInput.value) < 0) {
+          e.preventDefault();
+          alert('Price cannot be negative.');
+          return false;
+        }
+
+        // Validate image file sizes
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        for (let input of imageInputs) {
+          if (input.files.length > 0) {
+            const file = input.files[0];
+            if (file.size > maxSize) {
+              e.preventDefault();
+              alert(`Image ${file.name} is too large. Maximum size is 5MB.`);
+              return false;
+            }
+          }
+        }
+
+        // Show loading state
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Posting...';
+        submitBtn.disabled = true;
+      });
+
+      // Save draft functionality
+      document.getElementById('save-draft').addEventListener('click', function() {
+        // In a real implementation, you would save the form data as a draft
+        alert('Draft saved! (This is a placeholder - implement draft saving functionality)');
+      });
+
+      // Auto-save functionality (every 30 seconds)
+      let autoSaveTimeout;
+
+      function autoSave() {
+        const title = titleInput.value.trim();
+        const description = descriptionInput.value.trim();
+
+        if (title || description) {
+          // In a real implementation, you would save the form data
+          console.log('Auto-saving draft...');
+        }
+      }
+
+      [titleInput, descriptionInput].forEach(input => {
+        input.addEventListener('input', function() {
+          clearTimeout(autoSaveTimeout);
+          autoSaveTimeout = setTimeout(autoSave, 30000);
+        });
+      });
+
+      // Character count for description
+      const descriptionCharCount = document.createElement('div');
+      descriptionCharCount.className = 'form-text text-end';
+      descriptionInput.parentNode.appendChild(descriptionCharCount);
+
+      function updateCharCount() {
+        const count = descriptionInput.value.length;
+        descriptionCharCount.textContent = `${count} characters`;
+        descriptionCharCount.className = `form-text text-end ${count > 1000 ? 'text-warning' : ''}`;
+      }
+
+      descriptionInput.addEventListener('input', updateCharCount);
+      updateCharCount();
+
+      // Auto-update preview on page load
+      updatePreview();
+    });
+  </script>
+{% endblock %}

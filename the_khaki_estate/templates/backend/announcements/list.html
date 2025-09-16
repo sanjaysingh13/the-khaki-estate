@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block title %}Announcements - Housing Complex Management{% endblock %}
+{% block content %}
+  <div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h1 class="h3 mb-0">
+              <i class="fas fa-bullhorn text-primary me-2"></i> Announcements
+            </h1>
+            <p class="text-muted mb-0">Stay updated with the latest community news and updates</p>
+          </div>
+          {% if user.is_committee_member %}
+            <div>
+              <a href="{% url 'backend:announcement_create' %}"
+                 class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create Announcement
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <!-- Filters and Search -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-body">
+            <form method="get" class="row g-3">
+              <div class="col-md-3">
+                <label for="category" class="form-label">Category</label>
+                <select name="category" id="category" class="form-select">
+                  <option value="">All Categories</option>
+                  {% for category in categories %}
+                    <option value="{{ category.id }}"
+                            {% if current_category == category.id|stringformat:"s" %}selected{% endif %}>
+                      {{ category.name }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label for="urgent" class="form-label">Urgency</label>
+                <select name="urgent" id="urgent" class="form-select">
+                  <option value="">All</option>
+                  <option value="true" {% if current_urgent == "true" %}selected{% endif %}>Urgent Only</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label for="read" class="form-label">Read Status</label>
+                <select name="read" id="read" class="form-select">
+                  <option value="">All</option>
+                  <option value="unread" {% if current_read == "unread" %}selected{% endif %}>Unread</option>
+                  <option value="read" {% if current_read == "read" %}selected{% endif %}>Read</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label for="search" class="form-label">Search</label>
+                <input type="text"
+                       name="search"
+                       id="search"
+                       class="form-control"
+                       placeholder="Search announcements..."
+                       value="{{ search_query }}" />
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                  <button type="submit" class="btn btn-outline-primary">
+                    <i class="fas fa-search me-2"></i>Filter
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Announcements List -->
+    <div class="row">
+      <div class="col-12">
+        {% if announcements %}
+          <div class="row">
+            {% for announcement in announcements %}
+              <div class="col-lg-6 mb-4">
+                <div class="card h-100 {% if announcement.is_urgent %}border-danger{% elif announcement.is_pinned %}border-warning{% endif %}">
+                  <!-- Card Header with Status Badges -->
+                  <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                      <span class="badge bg-{{ announcement.category.color_code|slice:'1:' }} me-2">{{ announcement.category.name }}</span>
+                      {% if announcement.is_urgent %}<span class="badge bg-danger me-2">Urgent</span>{% endif %}
+                      {% if announcement.is_pinned %}<span class="badge bg-warning me-2">Pinned</span>{% endif %}
+                    </div>
+                    <small class="text-muted">{{ announcement.created_at|timesince }} ago</small>
+                  </div>
+                  <!-- Card Body -->
+                  <div class="card-body">
+                    <h5 class="card-title">
+                      <a href="{% url 'backend:announcement_detail' announcement.id %}"
+                         class="text-decoration-none">{{ announcement.title }}</a>
+                    </h5>
+                    <p class="card-text">{{ announcement.content|truncatewords:30 }}</p>
+                    <!-- Attachment Indicator -->
+                    {% if announcement.attachment %}
+                      <div class="mb-2">
+                        <i class="fas fa-paperclip text-muted me-1"></i>
+                        <small class="text-muted">Attachment included</small>
+                      </div>
+                    {% endif %}
+                    <!-- Validity Period -->
+                    {% if announcement.valid_until %}
+                      <div class="mb-2">
+                        <i class="fas fa-clock text-muted me-1"></i>
+                        <small class="text-muted">Valid until {{ announcement.valid_until|date:"M d, Y" }}</small>
+                      </div>
+                    {% endif %}
+                  </div>
+                  <!-- Card Footer -->
+                  <div class="card-footer bg-transparent">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                        <small class="text-muted">
+                          <i class="fas fa-user me-1"></i>
+                          {{ announcement.author.get_full_name }}
+                        </small>
+                      </div>
+                      <div>
+                        <a href="{% url 'backend:announcement_detail' announcement.id %}"
+                           class="btn btn-sm btn-outline-primary">Read More</a>
+                        {% if user.is_committee_member %}
+                          <a href="{% url 'backend:announcement_edit' announcement.id %}"
+                             class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-edit"></i>
+                          </a>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          <!-- Pagination -->
+          {% if announcements.has_other_pages %}
+            <nav aria-label="Announcements pagination">
+              <ul class="pagination justify-content-center">
+                {% if announcements.has_previous %}
+                  <li class="page-item">
+                    <a class="page-link"
+                       href="?page={{ announcements.previous_page_number }}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_urgent %}&urgent={{ current_urgent }}{% endif %}{% if current_read %}&read={{ current_read }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">
+                      Previous
+                    </a>
+                  </li>
+                {% endif %}
+                {% for num in announcements.paginator.page_range %}
+                  {% if announcements.number == num %}
+                    <li class="page-item active">
+                      <span class="page-link">{{ num }}</span>
+                    </li>
+                  {% elif num > announcements.number|add:'-3' and num
+                    < announcements.number|add: '3' %}
+                    <li class="page-item">
+                      <a class="page-link"
+                         href="?page={{ num }}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_urgent %}&urgent={{ current_urgent }}{% endif %}{% if current_read %}&read={{ current_read }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">
+                        {{ num }}
+                      </a>
+                    </li>
+                  {% endif %}
+                {% endfor %}
+                {% if announcements.has_next %}
+                  <li class="page-item">
+                    <a class="page-link"
+                       href="?page={{ announcements.next_page_number }}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_urgent %}&urgent={{ current_urgent }}{% endif %}{% if current_read %}&read={{ current_read }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">
+                      Next
+                    </a>
+                  </li>
+                {% endif %}
+              </ul>
+            </nav>
+          {% endif %}
+        {% else %}
+          <!-- Empty State -->
+          <div class="text-center py-5">
+            <i class="fas fa-bullhorn text-muted fa-4x mb-4"></i>
+            <h4 class="text-muted">No announcements found</h4>
+            <p class="text-muted">Try adjusting your filters or check back later for new announcements.</p>
+            {% if user.is_committee_member %}
+              <a href="{% url 'backend:announcement_create' %}"
+                 class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create First Announcement
+              </a>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <!-- JavaScript for Enhanced Functionality -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Auto-submit form when filters change
+      const filterSelects = document.querySelectorAll('select[name="category"], select[name="urgent"], select[name="read"]');
+      filterSelects.forEach(select => {
+        select.addEventListener('change', function() {
+          this.form.submit();
+        });
+      });
+
+      // Search form submission with Enter key
+      const searchInput = document.getElementById('search');
+      searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          this.form.submit();
+        }
+      });
+
+      // Mark announcements as read when viewed
+      const announcementCards = document.querySelectorAll('.card');
+      announcementCards.forEach(card => {
+        card.addEventListener('click', function(e) {
+          // Only mark as read if clicking on the card itself, not on buttons
+          if (!e.target.closest('a, button')) {
+            const readMoreLink = this.querySelector('a[href*="announcement_detail"]');
+            if (readMoreLink) {
+              readMoreLink.click();
+            }
+          }
+        });
+      });
+    });
+  </script>
+{% endblock %}

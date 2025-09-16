@@ -1,0 +1,498 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block title %}Booking Calendar - Housing Complex Management{% endblock %}
+{% block content %}
+  <div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h1 class="h3 mb-0">
+              <i class="fas fa-calendar-alt text-primary me-2"></i> Booking Calendar
+            </h1>
+            <p class="text-muted mb-0">View facility availability and existing bookings</p>
+          </div>
+          <div>
+            <a href="{% url 'backend:booking_create' %}"
+               class="btn btn-primary me-2">
+              <i class="fas fa-plus me-2"></i>New Booking
+            </a>
+            <a href="{% url 'backend:booking_list' %}"
+               class="btn btn-outline-primary">
+              <i class="fas fa-list me-2"></i>List View
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Calendar Navigation -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h5 class="mb-0">{{ current_month }}</h5>
+              </div>
+              <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-primary" id="prev-month">
+                  <i class="fas fa-chevron-left"></i>
+                </button>
+                <button type="button" class="btn btn-outline-primary" id="current-month">
+                  <i class="fas fa-calendar-day"></i> Today
+                </button>
+                <button type="button" class="btn btn-outline-primary" id="next-month">
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Facility Filter -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label for="facility-filter" class="form-label">Filter by Facility</label>
+                <select class="form-select" id="facility-filter">
+                  <option value="">All Facilities</option>
+                  {% for area in common_areas %}<option value="{{ area.id }}">{{ area.name }}</option>{% endfor %}
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label for="status-filter" class="form-label">Filter by Status</label>
+                <select class="form-select" id="status-filter">
+                  <option value="">All Status</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="pending">Pending</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                  <button type="button" class="btn btn-outline-primary" id="apply-filters">
+                    <i class="fas fa-filter me-2"></i>Apply Filters
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Calendar View -->
+    <div class="row">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-calendar text-primary me-2"></i> Monthly Calendar View
+            </h5>
+          </div>
+          <div class="card-body">
+            <!-- Calendar Grid -->
+            <div class="calendar-container">
+              <div class="calendar-header">
+                <div class="calendar-day-header">Sun</div>
+                <div class="calendar-day-header">Mon</div>
+                <div class="calendar-day-header">Tue</div>
+                <div class="calendar-day-header">Wed</div>
+                <div class="calendar-day-header">Thu</div>
+                <div class="calendar-day-header">Fri</div>
+                <div class="calendar-day-header">Sat</div>
+              </div>
+              <div class="calendar-grid" id="calendar-grid">
+                <!-- Calendar days will be populated by JavaScript -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Legend -->
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-body">
+            <h6 class="card-title">Legend</h6>
+            <div class="row">
+              <div class="col-md-3">
+                <div class="d-flex align-items-center mb-2">
+                  <div class="booking-status confirmed me-2"></div>
+                  <small>Confirmed Bookings</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="d-flex align-items-center mb-2">
+                  <div class="booking-status pending me-2"></div>
+                  <small>Pending Bookings</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="d-flex align-items-center mb-2">
+                  <div class="booking-status cancelled me-2"></div>
+                  <small>Cancelled Bookings</small>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="d-flex align-items-center mb-2">
+                  <div class="booking-status available me-2"></div>
+                  <small>Available Slots</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Booking Details Modal -->
+  <div class="modal fade" id="bookingModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Booking Details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="booking-modal-body">
+          <!-- Booking details will be populated by JavaScript -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary" id="view-booking-details">
+            <i class="fas fa-external-link-alt me-2"></i>View Full Details
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- CSS for Calendar -->
+  <style>
+    .calendar-container {
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .calendar-header {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      background-color: #f8f9fa;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .calendar-day-header {
+      padding: 12px;
+      text-align: center;
+      font-weight: 600;
+      color: #6c757d;
+      border-right: 1px solid #dee2e6;
+    }
+
+    .calendar-day-header:last-child {
+      border-right: none;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      grid-template-rows: repeat(6, 1fr);
+      min-height: 400px;
+    }
+
+    .calendar-day {
+      border-right: 1px solid #dee2e6;
+      border-bottom: 1px solid #dee2e6;
+      padding: 8px;
+      min-height: 60px;
+      position: relative;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .calendar-day:last-child {
+      border-right: none;
+    }
+
+    .calendar-day:hover {
+      background-color: #f8f9fa;
+    }
+
+    .calendar-day.other-month {
+      background-color: #f8f9fa;
+      color: #6c757d;
+    }
+
+    .calendar-day.today {
+      background-color: #e3f2fd;
+      font-weight: 600;
+    }
+
+    .calendar-day-number {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .booking-item {
+      font-size: 10px;
+      padding: 2px 4px;
+      margin: 1px 0;
+      border-radius: 3px;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .booking-status {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+
+    .booking-status.confirmed {
+      background-color: #28a745;
+    }
+
+    .booking-status.pending {
+      background-color: #ffc107;
+    }
+
+    .booking-status.cancelled {
+      background-color: #dc3545;
+    }
+
+    .booking-status.available {
+      background-color: #6c757d;
+    }
+
+    .booking-item.confirmed {
+      background-color: #d4edda;
+      color: #155724;
+      border-left: 3px solid #28a745;
+    }
+
+    .booking-item.pending {
+      background-color: #fff3cd;
+      color: #856404;
+      border-left: 3px solid #ffc107;
+    }
+
+    .booking-item.cancelled {
+      background-color: #f8d7da;
+      color: #721c24;
+      border-left: 3px solid #dc3545;
+    }
+
+    .more-bookings {
+      font-size: 10px;
+      color: #6c757d;
+      font-style: italic;
+      margin-top: 2px;
+    }
+  </style>
+  <!-- JavaScript for Calendar Functionality -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      let currentDate = new Date();
+      let bookingsData = {
+        {
+          bookings_by_area | safe
+        }
+      };
+
+      // Initialize calendar
+      renderCalendar();
+
+      // Calendar navigation
+      document.getElementById('prev-month').addEventListener('click', function() {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        renderCalendar();
+      });
+
+      document.getElementById('next-month').addEventListener('click', function() {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        renderCalendar();
+      });
+
+      document.getElementById('current-month').addEventListener('click', function() {
+        currentDate = new Date();
+        renderCalendar();
+      });
+
+      // Filter functionality
+      document.getElementById('apply-filters').addEventListener('click', function() {
+        renderCalendar();
+      });
+
+      function renderCalendar() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+
+        // Update month display
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        document.querySelector('.card-body h5').textContent = `${monthNames[month]} ${year}`;
+
+        // Get first day of month and number of days
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startingDayOfWeek = firstDay.getDay();
+
+        // Clear calendar grid
+        const calendarGrid = document.getElementById('calendar-grid');
+        calendarGrid.innerHTML = '';
+
+        // Add empty cells for days before the first day of the month
+        for (let i = 0; i < startingDayOfWeek; i++) {
+          const dayElement = createDayElement(0, true);
+          calendarGrid.appendChild(dayElement);
+        }
+
+        // Add days of the month
+        for (let day = 1; day <= daysInMonth; day++) {
+          const dayElement = createDayElement(day, false);
+          calendarGrid.appendChild(dayElement);
+        }
+
+        // Fill remaining cells to complete the grid
+        const totalCells = calendarGrid.children.length;
+        const remainingCells = 42 - totalCells; // 6 rows * 7 days
+        for (let i = 0; i < remainingCells; i++) {
+          const dayElement = createDayElement(0, true);
+          calendarGrid.appendChild(dayElement);
+        }
+      }
+
+      function createDayElement(day, isOtherMonth) {
+        const dayElement = document.createElement('div');
+        dayElement.className = 'calendar-day';
+
+        if (isOtherMonth) {
+          dayElement.classList.add('other-month');
+        } else {
+          dayElement.classList.add('calendar-day');
+
+          // Check if it's today
+          const today = new Date();
+          if (day === today.getDate() &&
+            currentDate.getMonth() === today.getMonth() &&
+            currentDate.getFullYear() === today.getFullYear()) {
+            dayElement.classList.add('today');
+          }
+
+          // Add day number
+          const dayNumber = document.createElement('div');
+          dayNumber.className = 'calendar-day-number';
+          dayNumber.textContent = day;
+          dayElement.appendChild(dayNumber);
+
+          // Add bookings for this day
+          addBookingsToDay(dayElement, day);
+        }
+
+        return dayElement;
+      }
+
+      function addBookingsToDay(dayElement, day) {
+        const facilityFilter = document.getElementById('facility-filter').value;
+        const statusFilter = document.getElementById('status-filter').value;
+
+        let dayBookings = [];
+
+        // Collect bookings for this day
+        Object.keys(bookingsData).forEach(facilityId => {
+          if (facilityFilter && facilityId !== facilityFilter) return;
+
+          const facilityBookings = bookingsData[facilityId];
+          facilityBookings.forEach(booking => {
+            const bookingDate = new Date(booking.booking_date);
+            if (bookingDate.getDate() === day &&
+              bookingDate.getMonth() === currentDate.getMonth() &&
+              bookingDate.getFullYear() === currentDate.getFullYear()) {
+
+              if (!statusFilter || booking.status === statusFilter) {
+                dayBookings.push(booking);
+              }
+            }
+          });
+        });
+
+        // Sort bookings by start time
+        dayBookings.sort((a, b) => a.start_time.localeCompare(b.start_time));
+
+        // Display bookings (limit to 3 visible)
+        const maxVisible = 3;
+        dayBookings.slice(0, maxVisible).forEach(booking => {
+          const bookingElement = document.createElement('div');
+          bookingElement.className = `booking-item ${booking.status}`;
+          bookingElement.textContent = `${booking.start_time} - ${booking.common_area_name}`;
+          bookingElement.onclick = () => showBookingDetails(booking);
+          dayElement.appendChild(bookingElement);
+        });
+
+        // Show "more" indicator if there are additional bookings
+        if (dayBookings.length > maxVisible) {
+          const moreElement = document.createElement('div');
+          moreElement.className = 'more-bookings';
+          moreElement.textContent = `+${dayBookings.length - maxVisible} more`;
+          dayElement.appendChild(moreElement);
+        }
+      }
+
+      function showBookingDetails(booking) {
+        const modalBody = document.getElementById('booking-modal-body');
+        modalBody.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Booking Information</h6>
+                    <p><strong>Booking Number:</strong> ${booking.booking_number}</p>
+                    <p><strong>Facility:</strong> ${booking.common_area_name}</p>
+                    <p><strong>Date:</strong> ${booking.booking_date}</p>
+                    <p><strong>Time:</strong> ${booking.start_time} - ${booking.end_time}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Booking Details</h6>
+                    <p><strong>Purpose:</strong> ${booking.purpose}</p>
+                    <p><strong>Status:</strong> <span class="badge bg-${booking.status === 'confirmed' ? 'success' : booking.status === 'pending' ? 'warning' : 'danger'}">${booking.status}</span></p>
+                    <p><strong>Guests:</strong> ${booking.guests_count}</p>
+                    <p><strong>Fee:</strong> ₹${booking.total_fee}</p>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <h6>Resident Information</h6>
+                    <p><strong>Name:</strong> ${booking.resident_name}</p>
+                    <p><strong>Flat:</strong> ${booking.resident_flat}</p>
+                </div>
+            </div>
+        `;
+
+        // Update view details button
+        const viewDetailsBtn = document.getElementById('view-booking-details');
+        viewDetailsBtn.onclick = () => {
+          window.location.href = `/backend/bookings/${booking.id}/`;
+        };
+
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('bookingModal'));
+        modal.show();
+      }
+
+      // Initialize calendar on page load
+      renderCalendar();
+    });
+  </script>
+{% endblock %}

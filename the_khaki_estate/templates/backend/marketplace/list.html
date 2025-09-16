@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block title %}Marketplace - Housing Complex Management{% endblock %}
+{% block content %}
+  <div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h1 class="h3 mb-0">
+              <i class="fas fa-store text-primary me-2"></i> Community Marketplace
+            </h1>
+            <p class="text-muted mb-0">Buy, sell, and exchange items with your neighbors</p>
+          </div>
+          <div>
+            <a href="{% url 'backend:marketplace_create' %}" class="btn btn-primary">
+              <i class="fas fa-plus me-2"></i>Post Item
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Filters and Search -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card">
+          <div class="card-body">
+            <form method="get" class="row g-3">
+              <div class="col-md-3">
+                <label for="type" class="form-label">Item Type</label>
+                <select name="type" id="type" class="form-select">
+                  <option value="">All Types</option>
+                  {% for type_code, type_name in item_types %}
+                    <option value="{{ type_code }}"
+                            {% if current_type == type_code %}selected{% endif %}>{{ type_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label for="search" class="form-label">Search</label>
+                <input type="text"
+                       name="search"
+                       id="search"
+                       class="form-control"
+                       placeholder="Search items..."
+                       value="{{ search_query }}" />
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                  <button type="submit" class="btn btn-outline-primary">
+                    <i class="fas fa-search me-2"></i>Search
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Items Grid -->
+    <div class="row">
+      <div class="col-12">
+        {% if items %}
+          <div class="row">
+            {% for item in items %}
+              <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card h-100">
+                  <!-- Item Image -->
+                  {% if item.image1 %}
+                    <img src="{{ item.image1.url }}"
+                         class="card-img-top"
+                         alt="{{ item.title }}"
+                         style="height: 200px;
+                                object-fit: cover" />
+                  {% else %}
+                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center"
+                         style="height: 200px">
+                      <i class="fas fa-image text-muted fa-3x"></i>
+                    </div>
+                  {% endif %}
+                  <!-- Card Body -->
+                  <div class="card-body d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <span class="badge bg-primary">{{ item.get_item_type_display }}</span>
+                      <small class="text-muted">{{ item.created_at|timesince }} ago</small>
+                    </div>
+                    <h5 class="card-title">
+                      <a href="{% url 'backend:marketplace_detail' item.id %}"
+                         class="text-decoration-none">{{ item.title }}</a>
+                    </h5>
+                    <p class="card-text flex-grow-1">{{ item.description|truncatewords:15 }}</p>
+                    <!-- Price -->
+                    {% if item.price %}
+                      <div class="mb-2">
+                        <span class="h5 text-success">₹{{ item.price }}</span>
+                      </div>
+                    {% endif %}
+                    <!-- Seller Info -->
+                    <div class="mb-2">
+                      <small class="text-muted">
+                        <i class="fas fa-user me-1"></i>
+                        {{ item.seller.get_full_name }}
+                      </small>
+                    </div>
+                    <!-- Expiry Info -->
+                    <div class="mb-2">
+                      <small class="text-muted">
+                        <i class="fas fa-clock me-1"></i>
+                        Expires: {{ item.expires_at|date:"M d, Y" }}
+                      </small>
+                    </div>
+                  </div>
+                  <!-- Card Footer -->
+                  <div class="card-footer bg-transparent">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                        {% if item.is_owner %}<span class="badge bg-info">Your Item</span>{% endif %}
+                      </div>
+                      <div>
+                        <a href="{% url 'backend:marketplace_detail' item.id %}"
+                           class="btn btn-sm btn-outline-primary">View Details</a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          <!-- Pagination -->
+          {% if items.has_other_pages %}
+            <nav aria-label="Marketplace pagination">
+              <ul class="pagination justify-content-center">
+                {% if items.has_previous %}
+                  <li class="page-item">
+                    <a class="page-link"
+                       href="?page={{ items.previous_page_number }}{% if current_type %}&type={{ current_type }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">
+                      Previous
+                    </a>
+                  </li>
+                {% endif %}
+                {% for num in items.paginator.page_range %}
+                  {% if items.number == num %}
+                    <li class="page-item active">
+                      <span class="page-link">{{ num }}</span>
+                    </li>
+                  {% elif num > items.number|add:'-3' and num
+                    < items.number|add: '3' %}
+                    <li class="page-item">
+                      <a class="page-link"
+                         href="?page={{ num }}{% if current_type %}&type={{ current_type }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">
+                        {{ num }}
+                      </a>
+                    </li>
+                  {% endif %}
+                {% endfor %}
+                {% if items.has_next %}
+                  <li class="page-item">
+                    <a class="page-link"
+                       href="?page={{ items.next_page_number }}{% if current_type %}&type={{ current_type }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">
+                      Next
+                    </a>
+                  </li>
+                {% endif %}
+              </ul>
+            </nav>
+          {% endif %}
+        {% else %}
+          <!-- Empty State -->
+          <div class="text-center py-5">
+            <i class="fas fa-store text-muted fa-4x mb-4"></i>
+            <h4 class="text-muted">No items found</h4>
+            <p class="text-muted">
+              {% if search_query %}
+                No items match your search criteria. Try adjusting your filters.
+              {% else %}
+                No items are currently available in the marketplace.
+              {% endif %}
+            </p>
+            <a href="{% url 'backend:marketplace_create' %}" class="btn btn-primary">
+              <i class="fas fa-plus me-2"></i>Post First Item
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <!-- JavaScript for Enhanced Functionality -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Auto-submit form when filters change
+      const filterSelects = document.querySelectorAll('select[name="type"]');
+      filterSelects.forEach(select => {
+        select.addEventListener('change', function() {
+          this.form.submit();
+        });
+      });
+
+      // Search form submission with Enter key
+      const searchInput = document.getElementById('search');
+      searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          this.form.submit();
+        }
+      });
+
+      // Add hover effects for item cards
+      const itemCards = document.querySelectorAll('.card');
+      itemCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+          this.style.transform = 'translateY(-2px)';
+          this.style.transition = 'transform 0.2s ease';
+          this.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+        });
+
+        card.addEventListener('mouseleave', function() {
+          this.style.transform = 'translateY(0)';
+          this.style.boxShadow = '';
+        });
+      });
+
+      // Image lazy loading
+      const images = document.querySelectorAll('img[src]');
+      images.forEach(img => {
+        img.addEventListener('error', function() {
+          this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg==';
+        });
+      });
+    });
+  </script>
+{% endblock %}
