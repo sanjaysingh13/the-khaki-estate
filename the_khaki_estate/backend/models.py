@@ -20,12 +20,14 @@ class Resident(models.Model):
     phone_number = models.CharField(max_length=13)
     alternate_phone = models.CharField(max_length=13, blank=True)
     resident_type = models.CharField(
-        max_length=10, choices=RESIDENT_TYPES, default="owner"
+        max_length=10,
+        choices=RESIDENT_TYPES,
+        default="owner",
     )
     is_committee_member = models.BooleanField(default=False)
     move_in_date = models.DateField(null=True, blank=True)
     emergency_contact_name = models.CharField(max_length=100, blank=True)
-    emergency_contact_phone = models.CharField(max_length=15, blank=True)
+    emergency_contact_phone = models.CharField(max_length=13, blank=True)
 
     # Notification preferences
     email_notifications = models.BooleanField(default=True)
@@ -58,7 +60,9 @@ class Announcement(models.Model):
     content = models.TextField()
     category = models.ForeignKey(AnnouncementCategory, on_delete=models.CASCADE)
     author = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="announcements"
+        User,
+        on_delete=models.CASCADE,
+        related_name="announcements",
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -94,7 +98,9 @@ class Comment(models.Model):
     """Comments on announcements"""
 
     announcement = models.ForeignKey(
-        Announcement, on_delete=models.CASCADE, related_name="comments"
+        Announcement,
+        on_delete=models.CASCADE,
+        related_name="comments",
     )
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField()
@@ -115,7 +121,7 @@ class MaintenanceCategory(models.Model):
 
     name = models.CharField(max_length=50)
     priority_level = models.IntegerField(
-        default=1
+        default=1,
     )  # 1=Low, 2=Medium, 3=High, 4=Emergency
     estimated_resolution_hours = models.IntegerField(default=24)
 
@@ -149,13 +155,15 @@ class MaintenanceRequest(models.Model):
     # Request details
     resident = models.ForeignKey(User, on_delete=models.CASCADE)
     location = models.CharField(
-        max_length=100
+        max_length=100,
     )  # e.g., "Flat A-101", "Common Area - Lobby"
     priority = models.IntegerField(choices=PRIORITY_CHOICES, default=2)
 
     # Status tracking
     status = models.CharField(
-        max_length=15, choices=STATUS_CHOICES, default="submitted"
+        max_length=15,
+        choices=STATUS_CHOICES,
+        default="submitted",
     )
     assigned_to = models.ForeignKey(
         User,
@@ -205,7 +213,9 @@ class MaintenanceUpdate(models.Model):
     """Updates/comments on maintenance requests"""
 
     request = models.ForeignKey(
-        MaintenanceRequest, on_delete=models.CASCADE, related_name="updates"
+        MaintenanceRequest,
+        on_delete=models.CASCADE,
+        related_name="updates",
     )
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField()
@@ -325,7 +335,9 @@ class Event(models.Model):
 
     # Organizer
     organizer = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="organized_events"
+        User,
+        on_delete=models.CASCADE,
+        related_name="organized_events",
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -386,7 +398,9 @@ class MarketplaceItem(models.Model):
 
     # Listing details
     seller = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="marketplace_items"
+        User,
+        on_delete=models.CASCADE,
+        related_name="marketplace_items",
     )
     contact_phone = models.CharField(max_length=15, blank=True)
 
@@ -492,7 +506,9 @@ class NotificationType(models.Model):
     template_name = models.CharField(max_length=100)  # Email template
     sms_template = models.TextField(blank=True)  # SMS template
     default_delivery = models.CharField(
-        max_length=10, choices=DELIVERY_METHODS, default="email"
+        max_length=10,
+        choices=DELIVERY_METHODS,
+        default="email",
     )
     is_urgent = models.BooleanField(default=False)
 
@@ -511,7 +527,9 @@ class Notification(models.Model):
     ]
 
     recipient = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="notifications"
+        User,
+        on_delete=models.CASCADE,
+        related_name="notifications",
     )
     notification_type = models.ForeignKey(NotificationType, on_delete=models.CASCADE)
 
@@ -547,7 +565,8 @@ class Notification(models.Model):
 
             try:
                 model = apps.get_model(
-                    "the_khaki_estate.backend", self.related_object_type
+                    "the_khaki_estate.backend",
+                    self.related_object_type,
                 )
                 return model.objects.get(id=self.related_object_id)
             except:
