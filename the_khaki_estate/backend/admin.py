@@ -12,6 +12,7 @@ from .models import MarketplaceItem
 from .models import Notification
 from .models import NotificationType
 from .models import Resident
+from .models import Staff
 
 User = get_user_model()
 
@@ -88,6 +89,153 @@ class ResidentAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related("user")
 
 
+@admin.register(Staff)
+class StaffAdmin(admin.ModelAdmin):
+    """
+    Admin interface for managing staff profiles.
+    Provides comprehensive management of maintenance staff including their roles,
+    permissions, and employment details.
+    """
+
+    list_display = [
+        "user",
+        "employee_id",
+        "staff_role",
+        "department",
+        "employment_status",
+        "is_active",
+        "hire_date",
+        "can_access_all_maintenance",
+    ]
+    list_filter = [
+        "staff_role",
+        "employment_status",
+        "is_active",
+        "department",
+        "can_access_all_maintenance",
+        "can_assign_requests",
+        "can_close_requests",
+        "can_manage_finances",
+        "is_available_24x7",
+    ]
+    search_fields = [
+        "user__username",
+        "user__email",
+        "user__name",
+        "employee_id",
+        "phone_number",
+        "department",
+    ]
+    readonly_fields = ["user", "created_at", "updated_at", "last_activity"]
+
+    fieldsets = (
+        (
+            "User Information",
+            {
+                "fields": ("user",),
+            },
+        ),
+        (
+            "Staff Details",
+            {
+                "fields": (
+                    "employee_id",
+                    "staff_role",
+                    "department",
+                    "employment_status",
+                    "hire_date",
+                    "reporting_to",
+                ),
+            },
+        ),
+        (
+            "Contact Information",
+            {
+                "fields": (
+                    "phone_number",
+                    "alternate_phone",
+                    "emergency_contact_name",
+                    "emergency_contact_phone",
+                ),
+            },
+        ),
+        (
+            "Work Permissions",
+            {
+                "fields": (
+                    "can_access_all_maintenance",
+                    "can_assign_requests",
+                    "can_close_requests",
+                    "can_manage_finances",
+                    "can_send_announcements",
+                ),
+                "description": "Define what this staff member can do in the system",
+            },
+        ),
+        (
+            "Schedule & Availability",
+            {
+                "fields": (
+                    "work_schedule",
+                    "is_available_24x7",
+                    "is_active",
+                ),
+            },
+        ),
+        (
+            "Notification Preferences",
+            {
+                "fields": ("email_notifications", "sms_notifications", "urgent_only"),
+            },
+        ),
+        (
+            "Activity Tracking",
+            {
+                "fields": ("last_activity", "created_at", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    def get_queryset(self, request):
+        """Optimize queryset with select_related for better performance."""
+        return (
+            super().get_queryset(request).select_related("user", "reporting_to__user")
+        )
+
+    def save_model(self, request, obj, form, change):
+        """
+        Custom save method to set default permissions based on staff role
+        if this is a new staff member.
+        """
+        if not change:  # New staff member
+            # Set default permissions based on role
+            role_permissions = {
+                "facility_manager": {
+                    "can_access_all_maintenance": True,
+                    "can_assign_requests": True,
+                    "can_close_requests": True,
+                    "can_send_announcements": True,
+                },
+                "accountant": {
+                    "can_manage_finances": True,
+                    "can_send_announcements": True,
+                },
+                "maintenance_supervisor": {
+                    "can_access_all_maintenance": True,
+                    "can_assign_requests": True,
+                    "can_close_requests": True,
+                },
+            }
+
+            permissions = role_permissions.get(obj.staff_role, {})
+            for perm, value in permissions.items():
+                if not hasattr(obj, perm) or getattr(obj, perm) is None:
+                    setattr(obj, perm, value)
+
+        super().save_model(request, obj, form, change)
+
+
 # Inline admin for showing Resident info in User admin
 class ResidentInline(admin.StackedInline):
     model = Resident
@@ -109,29 +257,246 @@ class ResidentInline(admin.StackedInline):
     ]
 
 
-# Extend User admin to include Resident profile
+# Inline admin for showing Staff info in User admin
+class StaffInline(admin.StackedInline):
+    model = Staff
+    can_delete = False
+    verbose_name_plural = "Staff Profile"
+    fields = [
+        "employee_id",
+        "staff_role",
+        "department",
+        "employment_status",
+        "hire_date",
+        "phone_number",
+        "alternate_phone",
+        "can_access_all_maintenance",
+        "can_assign_requests",
+        "can_close_requests",
+        "can_manage_finances",
+        "can_send_announcements",
+        "is_active",
+        "work_schedule",
+        "is_available_24x7",
+        "email_notifications",
+        "sms_notifications",
+        "urgent_only",
+    ]
+
+
+# Extend User admin to include both Resident and Staff profiles
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
 
 class UserAdmin(BaseUserAdmin):
-    inlines = (ResidentInline,)
+    """
+    Enhanced User admin that dynamically shows either Resident or Staff inline
+    based on the user's user_type field.
+    """
+
+    # Add user_type to the fieldsets
+    fieldsets = BaseUserAdmin.fieldsets + (("User Type", {"fields": ("user_type",)}),)
+
+    # Add user_type to the list display
+    list_display = BaseUserAdmin.list_display + ("user_type",)
+    list_filter = BaseUserAdmin.list_filter + ("user_type",)
 
     def get_inline_instances(self, request, obj=None):
+        """
+        Dynamically return appropriate inline based on user type.
+        - For residents: show ResidentInline
+        - For staff: show StaffInline
+        """
         if not obj:
             return list()
-        return super().get_inline_instances(request, obj)
+
+        inlines = []
+
+        # Show appropriate inline based on user type
+        if obj.user_type == "resident":
+            # Check if resident profile exists
+            if hasattr(obj, "resident"):
+                inlines = [ResidentInline(self.model, self.admin_site)]
+        elif obj.user_type == "staff":
+            # Check if staff profile exists
+            if hasattr(obj, "staff"):
+                inlines = [StaffInline(self.model, self.admin_site)]
+
+        return [inline for inline in inlines]
+
+    def get_queryset(self, request):
+        """Optimize queryset with select_related."""
+        return super().get_queryset(request).select_related("resident", "staff")
 
 
-# Re-register User admin with Resident inline
+# Re-register User admin with enhanced functionality
 admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
+
+
+# Enhanced MaintenanceRequest admin with staff assignment capabilities
+@admin.register(MaintenanceRequest)
+class MaintenanceRequestAdmin(admin.ModelAdmin):
+    """
+    Enhanced admin for maintenance requests with staff assignment and tracking.
+    """
+
+    list_display = [
+        "ticket_number",
+        "title",
+        "resident",
+        "category",
+        "priority",
+        "status",
+        "assigned_to",
+        "created_at",
+        "is_overdue",
+    ]
+
+    list_filter = [
+        "status",
+        "priority",
+        "category",
+        "assigned_to",
+        "created_at",
+        "resolved_at",
+    ]
+
+    search_fields = [
+        "ticket_number",
+        "title",
+        "description",
+        "resident__username",
+        "resident__name",
+        "location",
+    ]
+
+    readonly_fields = [
+        "ticket_number",
+        "created_at",
+        "updated_at",
+        "acknowledged_at",
+        "assigned_at",
+        "resolved_at",
+        "closed_at",
+    ]
+
+    fieldsets = (
+        (
+            "Request Details",
+            {
+                "fields": (
+                    "ticket_number",
+                    "title",
+                    "description",
+                    "category",
+                    "location",
+                    "priority",
+                    "attachment",
+                ),
+            },
+        ),
+        (
+            "Requester Information",
+            {
+                "fields": ("resident",),
+            },
+        ),
+        (
+            "Assignment & Status",
+            {
+                "fields": (
+                    "status",
+                    "assigned_to",
+                    "assigned_by",
+                    "estimated_completion",
+                    "actual_completion",
+                ),
+            },
+        ),
+        (
+            "Cost Tracking",
+            {
+                "fields": ("estimated_cost", "actual_cost"),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            "Resident Feedback",
+            {
+                "fields": ("resident_rating", "resident_feedback"),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            "Timestamps",
+            {
+                "fields": (
+                    "created_at",
+                    "updated_at",
+                    "acknowledged_at",
+                    "assigned_at",
+                    "resolved_at",
+                    "closed_at",
+                ),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+
+    def get_queryset(self, request):
+        """Optimize queryset with select_related."""
+        return (
+            super()
+            .get_queryset(request)
+            .select_related(
+                "resident",
+                "assigned_to",
+                "assigned_by",
+                "category",
+            )
+        )
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """
+        Customize the assigned_to field to only show staff members who can handle maintenance.
+        """
+        if db_field.name == "assigned_to":
+            # Only show staff users who can handle maintenance
+            staff_users = User.objects.filter(
+                user_type="staff",
+                is_active=True,
+                staff__is_active=True,
+                staff__can_access_all_maintenance=True,
+            ).union(
+                User.objects.filter(
+                    user_type="staff",
+                    is_active=True,
+                    staff__is_active=True,
+                    staff__staff_role__in=[
+                        "facility_manager",
+                        "maintenance_supervisor",
+                        "electrician",
+                        "plumber",
+                    ],
+                ),
+            )
+            kwargs["queryset"] = staff_users
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    @admin.display(
+        description="Overdue",
+        boolean=True,
+    )
+    def is_overdue(self, obj):
+        """Display whether the request is overdue."""
+        return obj.is_overdue()
 
 
 # Register other models with basic admin
 admin.site.register(AnnouncementCategory)
 admin.site.register(Announcement)
 admin.site.register(MaintenanceCategory)
-admin.site.register(MaintenanceRequest)
 admin.site.register(CommonArea)
 admin.site.register(Booking)
 admin.site.register(Event)

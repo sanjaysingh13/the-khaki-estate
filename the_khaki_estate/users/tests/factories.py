@@ -9,9 +9,15 @@ from the_khaki_estate.users.models import User
 
 
 class UserFactory(DjangoModelFactory[User]):
+    """
+    Factory for creating User instances with realistic test data.
+    Can create both resident and staff users based on user_type.
+    """
+
     username = Faker("user_name")
     email = Faker("email")
     name = Faker("name")
+    user_type = "resident"  # Default to resident
 
     @post_generation
     def password(self, create: bool, extracted: Sequence[Any], **kwargs):  # noqa: FBT001
@@ -39,3 +45,15 @@ class UserFactory(DjangoModelFactory[User]):
     class Meta:
         model = User
         django_get_or_create = ["username"]
+
+
+class ResidentUserFactory(UserFactory):
+    """Factory for creating resident users specifically."""
+
+    user_type = "resident"
+
+
+class StaffUserFactory(UserFactory):
+    """Factory for creating staff users specifically."""
+
+    user_type = "staff"

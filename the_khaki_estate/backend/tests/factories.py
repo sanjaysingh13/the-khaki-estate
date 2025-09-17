@@ -4,6 +4,7 @@ These factories use factory_boy to generate realistic test data for all models.
 """
 
 import random
+from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
 
@@ -11,7 +12,6 @@ from django.utils import timezone
 from factory import Faker
 from factory import LazyAttribute
 from factory import SubFactory
-from factory import post_generation
 from factory.django import DjangoModelFactory
 
 from the_khaki_estate.backend.models import Announcement
@@ -31,6 +31,10 @@ from the_khaki_estate.backend.models import MarketplaceItem
 from the_khaki_estate.backend.models import Notification
 from the_khaki_estate.backend.models import NotificationType
 from the_khaki_estate.backend.models import Resident
+from the_khaki_estate.backend.models import Staff
+from the_khaki_estate.users.tests.factories import ResidentUserFactory
+from the_khaki_estate.users.tests.factories import StaffUserFactory
+from the_khaki_estate.users.tests.factories import UserFactory
 
 
 class ResidentFactory(DjangoModelFactory):
@@ -39,39 +43,163 @@ class ResidentFactory(DjangoModelFactory):
     Generates residents with various types (owner, tenant, family) and realistic flat numbers.
     """
 
-    # Basic user fields
-    username = Faker("user_name")
-    email = Faker("email")
-    first_name = Faker("first_name")
-    last_name = Faker("last_name")
+    # Link to User model
+    user = SubFactory(ResidentUserFactory)
 
     # Resident-specific fields
     flat_number = Faker("numerify", text="###")  # 3-digit flat number
     block = Faker("random_element", elements=["A", "B", "C", "D"])
-    phone_number = Faker("phone_number")
-    alternate_phone = Faker("phone_number")
+    phone_number = Faker("bothify", text="+91##########")  # Indian phone format
+    alternate_phone = Faker("bothify", text="+91##########")
     resident_type = Faker("random_element", elements=["owner", "tenant", "family"])
     is_committee_member = Faker("boolean", chance_of_getting_true=20)  # 20% chance
 
     # Dates and emergency contacts
     move_in_date = Faker("date_between", start_date="-5y", end_date="today")
     emergency_contact_name = Faker("name")
-    emergency_contact_phone = Faker("phone_number")
+    emergency_contact_phone = Faker("bothify", text="+91##########")
 
     # Notification preferences
     email_notifications = Faker("boolean", chance_of_getting_true=80)
     sms_notifications = Faker("boolean", chance_of_getting_true=30)
     urgent_only = Faker("boolean", chance_of_getting_true=10)
 
-    @post_generation
-    def password(self, create, extracted, **kwargs):
-        """Set a default password for the resident"""
-        password = extracted if extracted else "testpass123"
-        self.set_password(password)
-
     class Meta:
         model = Resident
-        django_get_or_create = ["username"]
+        django_get_or_create = ["flat_number"]
+
+
+class StaffFactory(DjangoModelFactory):
+    """
+    Factory for creating Staff instances with realistic test data.
+    Generates staff with various roles and appropriate permissions.
+    """
+
+    # Link to User model
+    user = SubFactory(StaffUserFactory)
+
+    # Staff identification and role information
+    employee_id = Faker("bothify", text="EMP###")  # EMP001, EMP002, etc.
+    staff_role = Faker(
+        "random_element",
+        elements=[
+            "facility_manager",
+            "accountant",
+            "security_head",
+            "maintenance_supervisor",
+            "electrician",
+            "plumber",
+            "cleaner",
+            "gardener",
+        ],
+    )
+    department = LazyAttribute(
+        lambda obj: {
+            "facility_manager": "Management",
+            "accountant": "Finance",
+            "security_head": "Security",
+            "maintenance_supervisor": "Maintenance",
+            "electrician": "Maintenance",
+            "plumber": "Maintenance",
+            "cleaner": "Housekeeping",
+            "gardener": "Landscaping",
+        }.get(obj.staff_role, "General"),
+    )
+
+    # Contact and personal information
+    phone_number = Faker("bothify", text="+91##########")
+    alternate_phone = Faker("bothify", text="+91##########")
+    emergency_contact_name = Faker("name")
+    emergency_contact_phone = Faker("bothify", text="+91##########")
+
+    # Employment details
+    employment_status = Faker(
+        "random_element",
+        elements=["full_time", "part_time", "contract", "consultant"],
+    )
+    hire_date = Faker("date_between", start_date="-3y", end_date="today")
+    reporting_to = None  # Can be set manually in tests
+
+    # Work permissions and access levels - set based on role
+    can_access_all_maintenance = LazyAttribute(
+        lambda obj: obj.staff_role
+        in [
+            "facility_manager",
+            "maintenance_supervisor",
+        ],
+    )
+    can_assign_requests = LazyAttribute(
+        lambda obj: obj.staff_role
+        in [
+            "facility_manager",
+            "maintenance_supervisor",
+        ],
+    )
+    can_close_requests = LazyAttribute(
+        lambda obj: obj.staff_role
+        in [
+            "facility_manager",
+            "maintenance_supervisor",
+            "electrician",
+            "plumber",
+        ],
+    )
+    can_manage_finances = LazyAttribute(lambda obj: obj.staff_role == "accountant")
+    can_send_announcements = LazyAttribute(
+        lambda obj: obj.staff_role
+        in [
+            "facility_manager",
+            "accountant",
+            "security_head",
+        ],
+    )
+
+    # Work schedule and availability
+    work_schedule = LazyAttribute(
+        lambda obj: {
+            "facility_manager": "Mon-Fri 9AM-6PM, On-call weekends",
+            "accountant": "Mon-Fri 9AM-5PM",
+            "security_head": "24/7 On-call",
+            "maintenance_supervisor": "Mon-Sat 8AM-6PM, Emergency on-call",
+            "electrician": "Mon-Fri 8AM-5PM, Emergency on-call",
+            "plumber": "Mon-Fri 8AM-5PM, Emergency on-call",
+            "cleaner": "Mon-Sat 6AM-2PM",
+            "gardener": "Mon-Fri 7AM-3PM",
+        }.get(obj.staff_role, "Mon-Fri 9AM-5PM"),
+    )
+
+    is_available_24x7 = LazyAttribute(
+        lambda obj: obj.staff_role
+        in [
+            "facility_manager",
+            "security_head",
+        ],
+    )
+
+    # Status and activity tracking
+    is_active = True  # Default to active
+    last_activity = Faker(
+        "date_time_between",
+        start_date="-7d",
+        end_date="now",
+        tzinfo=UTC,
+    )
+
+    # Notification preferences
+    email_notifications = Faker("boolean", chance_of_getting_true=90)
+    sms_notifications = LazyAttribute(
+        lambda obj: obj.staff_role
+        in [
+            "facility_manager",
+            "security_head",
+            "maintenance_supervisor",
+        ],
+    )
+    urgent_only = Faker("boolean", chance_of_getting_true=30)
+
+    class Meta:
+        model = Staff
+        django_get_or_create = ["employee_id"]
 
 
 class AnnouncementCategoryFactory(DjangoModelFactory):
@@ -134,7 +262,7 @@ class AnnouncementFactory(DjangoModelFactory):
     title = Faker("sentence", nb_words=6)
     content = Faker("text", max_nb_chars=500)
     category = SubFactory(AnnouncementCategoryFactory)
-    author = SubFactory(ResidentFactory)
+    author = SubFactory(UserFactory)
 
     # Display options
     is_pinned = Faker("boolean", chance_of_getting_true=10)
@@ -186,30 +314,41 @@ class MaintenanceRequestFactory(DjangoModelFactory):
     title = Faker("sentence", nb_words=5)
     description = Faker("text", max_nb_chars=300)
     category = SubFactory(MaintenanceCategoryFactory)
-    resident = SubFactory(ResidentFactory)
+    resident = SubFactory(UserFactory, user_type="resident")
 
     # Request details
-    location = LazyAttribute(lambda obj: f"Flat {obj.resident.flat_number}")
+    location = Faker("sentence", nb_words=3)  # e.g., "Flat A-101"
     priority = Faker("random_element", elements=[1, 2, 3, 4])
     status = Faker(
         "random_element",
-        elements=["submitted", "acknowledged", "in_progress", "resolved"],
+        elements=[
+            "submitted",
+            "acknowledged",
+            "assigned",
+            "in_progress",
+            "resolved",
+            "closed",
+        ],
     )
 
-    # Optional assignment
-    assigned_to = LazyAttribute(
-        lambda obj: SubFactory(ResidentFactory, is_committee_member=True)
-        if random.random() > 0.5
-        else None,
-    )
+    # Enhanced assignment to staff (set to None by default, can be overridden in tests)
+    assigned_to = None
+    assigned_by = None
 
-    # Timestamps
+    # Timestamps with enhanced tracking (simplified for factory)
     created_at = Faker("date_time_between", start_date="-30d", end_date="now")
-    resolved_at = LazyAttribute(
-        lambda obj: obj.created_at + timedelta(hours=random.randint(1, 72))
-        if obj.status == "resolved"
-        else None,
-    )
+    acknowledged_at = None
+    assigned_at = None
+    resolved_at = None
+    closed_at = None
+
+    # Cost tracking (simplified for factory)
+    estimated_cost = None
+    actual_cost = None
+
+    # Resident feedback (simplified for factory)
+    resident_rating = None
+    resident_feedback = ""
 
     class Meta:
         model = MaintenanceRequest
@@ -265,7 +404,7 @@ class BookingFactory(DjangoModelFactory):
     """
 
     common_area = SubFactory(CommonAreaFactory)
-    resident = SubFactory(ResidentFactory)
+    resident = SubFactory(UserFactory, user_type="resident")
 
     # Booking details
     booking_date = Faker("date_between", start_date="today", end_date="+30d")
@@ -286,7 +425,8 @@ class BookingFactory(DjangoModelFactory):
 
     # Status and payment
     status = Faker(
-        "random_element", elements=["pending", "confirmed", "cancelled", "completed"]
+        "random_element",
+        elements=["pending", "confirmed", "cancelled", "completed"],
     )
     total_fee = LazyAttribute(lambda obj: obj.common_area.booking_fee)
     is_paid = Faker("boolean", chance_of_getting_true=70)
@@ -332,7 +472,7 @@ class EventFactory(DjangoModelFactory):
     is_rsvp_required = Faker("boolean", chance_of_getting_true=60)
 
     # Organizer
-    organizer = SubFactory(ResidentFactory, is_committee_member=True)
+    organizer = SubFactory(UserFactory, user_type="resident")
 
     class Meta:
         model = Event
@@ -352,14 +492,17 @@ class MarketplaceItemFactory(DjangoModelFactory):
     )
     price = LazyAttribute(
         lambda obj: Faker(
-            "pydecimal", left_digits=4, right_digits=2, positive=True
+            "pydecimal",
+            left_digits=4,
+            right_digits=2,
+            positive=True,
         ).generate()
         if obj.item_type in ["sell", "service"]
         else None,
     )
 
     # Listing details
-    seller = SubFactory(ResidentFactory)
+    seller = SubFactory(UserFactory, user_type="resident")
     contact_phone = Faker("phone_number")
 
     # Status and dates
@@ -391,7 +534,8 @@ class NotificationTypeFactory(DjangoModelFactory):
     template_name = LazyAttribute(lambda obj: f"{obj.name}.html")
     sms_template = Faker("sentence", nb_words=10)
     default_delivery = Faker(
-        "random_element", elements=["email", "sms", "both", "in_app", "all"]
+        "random_element",
+        elements=["email", "sms", "both", "in_app", "all"],
     )
     is_urgent = Faker("boolean", chance_of_getting_true=30)
 
@@ -405,7 +549,7 @@ class NotificationFactory(DjangoModelFactory):
     Generates notifications with realistic content and status.
     """
 
-    recipient = SubFactory(ResidentFactory)
+    recipient = SubFactory(UserFactory, user_type="resident")
     notification_type = SubFactory(NotificationTypeFactory)
 
     # Content
@@ -415,7 +559,7 @@ class NotificationFactory(DjangoModelFactory):
         lambda obj: {
             "url": f"/notifications/{obj.id}/",
             "category": obj.notification_type.name,
-        }
+        },
     )
 
     # Delivery tracking
@@ -472,7 +616,7 @@ class EmergencyContactFactory(DjangoModelFactory):
     )
 
     is_active = Faker("boolean", chance_of_getting_true=90)
-    added_by = SubFactory(ResidentFactory, is_committee_member=True)
+    added_by = SubFactory(UserFactory, user_type="resident")
 
     class Meta:
         model = EmergencyContact
@@ -502,7 +646,7 @@ class DocumentFactory(DjangoModelFactory):
     is_public = Faker("boolean", chance_of_getting_true=80)
     committee_only = Faker("boolean", chance_of_getting_true=20)
 
-    uploaded_by = SubFactory(ResidentFactory, is_committee_member=True)
+    uploaded_by = SubFactory(UserFactory, user_type="resident")
 
     class Meta:
         model = Document
@@ -515,7 +659,7 @@ class CommentFactory(DjangoModelFactory):
     """
 
     announcement = SubFactory(AnnouncementFactory)
-    author = SubFactory(ResidentFactory)
+    author = SubFactory(UserFactory)
     content = Faker("text", max_nb_chars=200)
     parent = None  # Top-level comments by default
 
@@ -530,7 +674,7 @@ class MaintenanceUpdateFactory(DjangoModelFactory):
     """
 
     request = SubFactory(MaintenanceRequestFactory)
-    author = SubFactory(ResidentFactory)
+    author = SubFactory(UserFactory)
     content = Faker("text", max_nb_chars=200)
     status_changed_to = Faker(
         "random_element",
@@ -553,7 +697,7 @@ class EventRSVPFactory(DjangoModelFactory):
     """
 
     event = SubFactory(EventFactory)
-    resident = SubFactory(ResidentFactory)
+    resident = SubFactory(UserFactory, user_type="resident")
     response = Faker("random_element", elements=["yes", "no", "maybe"])
     guests_count = Faker("random_int", min=0, max=5)
     comment = Faker("text", max_nb_chars=100)
@@ -569,7 +713,7 @@ class AnnouncementReadFactory(DjangoModelFactory):
     """
 
     announcement = SubFactory(AnnouncementFactory)
-    resident = SubFactory(ResidentFactory)
+    resident = SubFactory(UserFactory, user_type="resident")
     read_at = Faker("date_time_between", start_date="-7d", end_date="now")
 
     class Meta:

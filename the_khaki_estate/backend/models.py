@@ -38,6 +38,166 @@ class Resident(models.Model):
         return f"{self.user.get_full_name()} - {self.flat_number}"
 
 
+class Staff(models.Model):
+    """
+    Staff profile for maintenance and management personnel.
+    This includes Facility Managers, Accountants, and other maintenance staff.
+    """
+
+    # Staff role choices - different types of maintenance staff
+    STAFF_ROLES = [
+        ("facility_manager", "Facility Manager"),
+        ("accountant", "Accountant"),
+        ("security_head", "Security Head"),
+        ("maintenance_supervisor", "Maintenance Supervisor"),
+        ("electrician", "Electrician"),
+        ("plumber", "Plumber"),
+        ("cleaner", "Cleaner"),
+        ("gardener", "Gardener"),
+    ]
+
+    # Employment status choices
+    EMPLOYMENT_STATUS = [
+        ("full_time", "Full Time"),
+        ("part_time", "Part Time"),
+        ("contract", "Contract"),
+        ("consultant", "Consultant"),
+    ]
+
+    # Link to User model - staff members are also users but with different permissions
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="staff")
+
+    # Staff identification and role information
+    employee_id = models.CharField(
+        max_length=20,
+        unique=True,
+        help_text="Unique employee identifier",
+    )
+    staff_role = models.CharField(
+        max_length=25,
+        choices=STAFF_ROLES,
+        help_text="Role/designation of the staff member",
+    )
+    department = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Department or team",
+    )
+
+    # Contact and personal information
+    phone_number = models.CharField(max_length=13, help_text="Primary contact number")
+    alternate_phone = models.CharField(
+        max_length=13,
+        blank=True,
+        help_text="Alternate contact number",
+    )
+    emergency_contact_name = models.CharField(max_length=100, blank=True)
+    emergency_contact_phone = models.CharField(max_length=13, blank=True)
+
+    # Employment details
+    employment_status = models.CharField(
+        max_length=15,
+        choices=EMPLOYMENT_STATUS,
+        default="full_time",
+    )
+    hire_date = models.DateField(help_text="Date of joining")
+    reporting_to = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="subordinates",
+        help_text="Direct supervisor/manager",
+    )
+
+    # Work permissions and access levels
+    can_access_all_maintenance = models.BooleanField(
+        default=False,
+        help_text="Can view and manage all maintenance requests",
+    )
+    can_assign_requests = models.BooleanField(
+        default=False,
+        help_text="Can assign maintenance requests to other staff",
+    )
+    can_close_requests = models.BooleanField(
+        default=False,
+        help_text="Can mark maintenance requests as resolved/closed",
+    )
+    can_manage_finances = models.BooleanField(
+        default=False,
+        help_text="Can access financial reports and billing",
+    )
+    can_send_announcements = models.BooleanField(
+        default=False,
+        help_text="Can create and send announcements to residents",
+    )
+
+    # Work schedule and availability
+    work_schedule = models.TextField(
+        blank=True,
+        help_text="Work schedule description (e.g., Mon-Fri 9AM-6PM)",
+    )
+    is_available_24x7 = models.BooleanField(
+        default=False,
+        help_text="Available for emergency calls 24/7",
+    )
+
+    # Status and activity tracking
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Is currently employed and active",
+    )
+    last_activity = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Last system activity",
+    )
+
+    # Notification preferences
+    email_notifications = models.BooleanField(default=True)
+    sms_notifications = models.BooleanField(default=False)
+    urgent_only = models.BooleanField(default=False)
+
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.get_full_name()} - {self.get_staff_role_display()} ({self.employee_id})"
+
+    def is_facility_manager(self) -> bool:
+        """Check if staff member is a Facility Manager."""
+        return self.staff_role == "facility_manager"
+
+    def is_accountant(self) -> bool:
+        """Check if staff member is an Accountant."""
+        return self.staff_role == "accountant"
+
+    def can_handle_maintenance(self) -> bool:
+        """Check if staff member can handle maintenance requests."""
+        # Facility managers and maintenance supervisors can handle all maintenance
+        # Specific technicians can handle requests in their domain
+        return (
+            self.staff_role
+            in [
+                "facility_manager",
+                "maintenance_supervisor",
+                "electrician",
+                "plumber",
+            ]
+            or self.can_access_all_maintenance
+        )
+
+    def get_subordinate_count(self) -> int:
+        """Get count of direct subordinates."""
+        return self.subordinates.filter(is_active=True).count()
+
+    class Meta:
+        verbose_name = "Staff Member"
+        verbose_name_plural = "Staff Members"
+        ordering = ["staff_role", "user__name"]
+
+
 class AnnouncementCategory(models.Model):
     """Categories for announcements"""
 
@@ -130,14 +290,19 @@ class MaintenanceCategory(models.Model):
 
 
 class MaintenanceRequest(models.Model):
-    """Maintenance and complaint requests"""
+    """
+    Maintenance and complaint requests with enhanced staff assignment capabilities.
+    Supports assignment to specific staff members based on their roles and permissions.
+    """
 
     STATUS_CHOICES = [
         ("submitted", "Submitted"),
         ("acknowledged", "Acknowledged"),
+        ("assigned", "Assigned"),
         ("in_progress", "In Progress"),
         ("resolved", "Resolved"),
         ("closed", "Closed"),
+        ("cancelled", "Cancelled"),
     ]
 
     PRIORITY_CHOICES = [
@@ -153,13 +318,19 @@ class MaintenanceRequest(models.Model):
     category = models.ForeignKey(MaintenanceCategory, on_delete=models.CASCADE)
 
     # Request details
-    resident = models.ForeignKey(User, on_delete=models.CASCADE)
+    resident = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="maintenance_requests",
+        help_text="Resident who submitted the request",
+    )
     location = models.CharField(
         max_length=100,
-    )  # e.g., "Flat A-101", "Common Area - Lobby"
+        help_text="e.g., 'Flat A-101', 'Common Area - Lobby'",
+    )
     priority = models.IntegerField(choices=PRIORITY_CHOICES, default=2)
 
-    # Status tracking
+    # Enhanced status tracking with staff assignment
     status = models.CharField(
         max_length=15,
         choices=STATUS_CHOICES,
@@ -170,20 +341,88 @@ class MaintenanceRequest(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="assigned_requests",
+        related_name="assigned_maintenance_requests",
+        help_text="Staff member assigned to handle this request",
+    )
+    assigned_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="assigned_maintenance_by",
+        help_text="Staff member who assigned this request",
+    )
+    assigned_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the request was assigned to a staff member",
     )
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    resolved_at = models.DateTimeField(null=True, blank=True)
+    acknowledged_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the request was first acknowledged by staff",
+    )
+    resolved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the request was marked as resolved",
+    )
+    closed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the request was officially closed",
+    )
 
-    # Attachments
+    # Attachments and documentation
     attachment = models.ImageField(upload_to="maintenance/", blank=True)
 
+    # Estimated completion and actual completion tracking
+    estimated_completion = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Estimated completion date/time",
+    )
+    actual_completion = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Actual completion date/time",
+    )
+
+    # Cost tracking
+    estimated_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Estimated cost for the maintenance work",
+    )
+    actual_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Actual cost incurred for the maintenance work",
+    )
+
+    # Resident satisfaction
+    resident_rating = models.IntegerField(
+        null=True,
+        blank=True,
+        choices=[(i, f"{i} Star{'s' if i != 1 else ''}") for i in range(1, 6)],
+        help_text="Resident rating (1-5 stars)",
+    )
+    resident_feedback = models.TextField(
+        blank=True,
+        help_text="Resident feedback on the completed work",
+    )
+
     def save(self, *args, **kwargs):
+        # Generate unique ticket number if not already set
         if not self.ticket_number:
-            # Generate unique ticket number
             last_ticket = (
                 MaintenanceRequest.objects.filter(
                     created_at__year=timezone.now().year,
@@ -200,13 +439,110 @@ class MaintenanceRequest(models.Model):
 
             self.ticket_number = f"MNT-{timezone.now().year}-{new_number:04d}"
 
+        # Auto-set timestamps based on status changes
+        if self.status == "acknowledged" and not self.acknowledged_at:
+            self.acknowledged_at = timezone.now()
+        elif self.status == "assigned" and not self.assigned_at:
+            self.assigned_at = timezone.now()
+        elif self.status == "resolved" and not self.resolved_at:
+            self.resolved_at = timezone.now()
+        elif self.status == "closed" and not self.closed_at:
+            self.closed_at = timezone.now()
+
         super().save(*args, **kwargs)
+
+    def assign_to_staff(self, staff_user, assigned_by_user=None):
+        """
+        Assign this maintenance request to a specific staff member.
+
+        Args:
+            staff_user: User object of the staff member to assign to
+            assigned_by_user: User object of who is making the assignment
+        """
+        self.assigned_to = staff_user
+        self.assigned_by = assigned_by_user
+        self.assigned_at = timezone.now()
+
+        # Update status to assigned if it's still in submitted/acknowledged state
+        if self.status in ["submitted", "acknowledged"]:
+            self.status = "assigned"
+
+        self.save()
+
+    def can_be_assigned_to(self, staff_user):
+        """
+        Check if this request can be assigned to a specific staff member.
+
+        Args:
+            staff_user: User object to check
+
+        Returns:
+            bool: True if the staff member can handle this request
+        """
+        if not staff_user.is_staff_member():
+            return False
+
+        try:
+            staff_profile = staff_user.staff
+            return staff_profile.can_handle_maintenance()
+        except:
+            return False
+
+    def get_suitable_staff(self):
+        """
+        Get a queryset of staff members who can handle this maintenance request.
+
+        Returns:
+            QuerySet: Staff members who can handle this request
+        """
+        # Get all active staff who can handle maintenance
+        suitable_staff = Staff.objects.filter(
+            is_active=True,
+            user__is_active=True,
+        ).filter(
+            models.Q(can_access_all_maintenance=True)
+            | models.Q(
+                staff_role__in=[
+                    "facility_manager",
+                    "maintenance_supervisor",
+                    "electrician",
+                    "plumber",
+                ],
+            ),
+        )
+
+        # For specific categories, we could add more filtering logic here
+        # For example, electrical issues to electricians, plumbing to plumbers
+
+        return suitable_staff
+
+    def is_overdue(self):
+        """Check if the maintenance request is overdue based on estimated completion."""
+        if self.estimated_completion and self.status not in [
+            "resolved",
+            "closed",
+            "cancelled",
+        ]:
+            return timezone.now() > self.estimated_completion
+        return False
+
+    def get_duration_since_created(self):
+        """Get the duration since the request was created."""
+        return timezone.now() - self.created_at
+
+    def get_resolution_time(self):
+        """Get the time taken to resolve the request."""
+        if self.resolved_at:
+            return self.resolved_at - self.created_at
+        return None
 
     def __str__(self):
         return f"{self.ticket_number} - {self.title}"
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["-priority", "-created_at"]
+        verbose_name = "Maintenance Request"
+        verbose_name_plural = "Maintenance Requests"
 
 
 class MaintenanceUpdate(models.Model):
