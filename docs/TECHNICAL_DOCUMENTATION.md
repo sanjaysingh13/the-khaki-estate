@@ -1,8 +1,8 @@
 # The Khaki Estate - Technical Documentation
 ## Architecture, Models, Workflows & Implementation Guide
 
-**Version**: 2.0
-**Last Updated**: December 2024
+**Version**: 2.0  
+**Last Updated**: December 2024  
 **Target Audience**: Developers, System Architects, Technical Teams
 
 ---
@@ -71,12 +71,12 @@ class User(AbstractUser):
     Enhanced User model with user type distinction.
     Supports both residents and maintenance staff.
     """
-
+    
     USER_TYPE_CHOICES = [
         ("resident", "Resident"),
         ("staff", "Staff"),
     ]
-
+    
     # Core fields
     name = CharField(max_length=255, blank=True)
     user_type = CharField(
@@ -84,7 +84,7 @@ class User(AbstractUser):
         choices=USER_TYPE_CHOICES,
         default="resident"
     )
-
+    
     # Helper methods for type checking
     def is_resident(self) -> bool
     def is_staff_member(self) -> bool
@@ -104,7 +104,7 @@ class Staff(models.Model):
     Professional staff profile with role-based permissions.
     Handles maintenance staff, facility managers, accountants, etc.
     """
-
+    
     STAFF_ROLES = [
         ("facility_manager", "Facility Manager"),
         ("accountant", "Accountant"),
@@ -115,24 +115,24 @@ class Staff(models.Model):
         ("cleaner", "Cleaner"),
         ("gardener", "Gardener"),
     ]
-
+    
     # Core identification
     user = OneToOneField(User, related_name="staff")
     employee_id = CharField(max_length=20, unique=True)
     staff_role = CharField(max_length=25, choices=STAFF_ROLES)
-
+    
     # Permissions (role-based access control)
     can_access_all_maintenance = BooleanField(default=False)
     can_assign_requests = BooleanField(default=False)
     can_close_requests = BooleanField(default=False)
     can_manage_finances = BooleanField(default=False)
     can_send_announcements = BooleanField(default=False)
-
+    
     # Employment & hierarchy
     employment_status = CharField(max_length=15, choices=EMPLOYMENT_STATUS)
     hire_date = DateField()
     reporting_to = ForeignKey("self", null=True, blank=True)
-
+    
     # Business logic methods
     def can_handle_maintenance(self) -> bool
     def is_facility_manager(self) -> bool
@@ -154,7 +154,7 @@ class MaintenanceRequest(models.Model):
     Enhanced maintenance request with staff assignment capabilities.
     Supports complete workflow from submission to closure.
     """
-
+    
     STATUS_CHOICES = [
         ("submitted", "Submitted"),
         ("acknowledged", "Acknowledged"),
@@ -164,25 +164,25 @@ class MaintenanceRequest(models.Model):
         ("closed", "Closed"),
         ("cancelled", "Cancelled"),      # NEW
     ]
-
+    
     # Enhanced assignment tracking
     assigned_to = ForeignKey(User, related_name="assigned_maintenance_requests")
     assigned_by = ForeignKey(User, related_name="assigned_maintenance_by")
     assigned_at = DateTimeField(null=True, blank=True)
-
+    
     # Enhanced timestamp tracking
     acknowledged_at = DateTimeField(null=True, blank=True)
     resolved_at = DateTimeField(null=True, blank=True)
     closed_at = DateTimeField(null=True, blank=True)
-
+    
     # Cost management
     estimated_cost = DecimalField(max_digits=10, decimal_places=2)
     actual_cost = DecimalField(max_digits=10, decimal_places=2)
-
+    
     # Resident feedback
     resident_rating = IntegerField(choices=[(i, f"{i} Stars") for i in range(1, 6)])
     resident_feedback = TextField(blank=True)
-
+    
     # Business logic methods
     def assign_to_staff(self, staff_user, assigned_by_user=None)
     def can_be_assigned_to(self, staff_user) -> bool
@@ -224,10 +224,10 @@ The system implements a **Single Table Inheritance** pattern for user management
 # Base User model with type discrimination
 class User(AbstractUser):
     user_type = CharField(choices=[("resident", "Resident"), ("staff", "Staff")])
-
+    
     def is_resident(self) -> bool:
         return self.user_type == "resident"
-
+    
     def is_staff_member(self) -> bool:
         return self.user_type == "staff"
 
@@ -257,7 +257,7 @@ def create_resident(user_data, resident_data):
     # Trigger signals for notification setup
     return user, resident
 
-# Staff registration workflow
+# Staff registration workflow  
 def create_staff(user_data, staff_data):
     """
     1. Create User with user_type='staff'
@@ -266,11 +266,11 @@ def create_staff(user_data, staff_data):
     4. Configure notification preferences based on role
     """
     user = User.objects.create_user(**user_data, user_type="staff")
-
+    
     # Set role-based permissions
     permissions = get_role_permissions(staff_data['staff_role'])
     staff = Staff.objects.create(user=user, **staff_data, **permissions)
-
+    
     return user, staff
 ```
 
@@ -297,7 +297,7 @@ def create_staff(user_data, staff_data):
 def get_suitable_staff(maintenance_request):
     """
     Smart staff assignment based on request category and staff expertise.
-
+    
     Algorithm:
     1. Filter active staff members
     2. Check role-based permissions
@@ -312,13 +312,13 @@ def get_suitable_staff(maintenance_request):
         Q(can_access_all_maintenance=True) |  # Facility Managers, Supervisors
         Q(staff_role__in=get_role_matches(request.category))  # Specialists
     )
-
+    
     # Future enhancement: Add workload balancing
     # suitable_staff = suitable_staff.annotate(
-    #     current_workload=Count('user__assigned_maintenance_requests',
+    #     current_workload=Count('user__assigned_maintenance_requests', 
     #                           filter=Q(user__assigned_maintenance_requests__status__in=['assigned', 'in_progress']))
     # ).order_by('current_workload')
-
+    
     return suitable_staff
 
 def get_role_matches(category):
@@ -346,7 +346,7 @@ class MaintenanceRequestStateMachine:
     Implements the maintenance request state machine with automatic
     timestamp tracking and validation.
     """
-
+    
     VALID_TRANSITIONS = {
         'submitted': ['acknowledged', 'cancelled'],
         'acknowledged': ['assigned', 'in_progress', 'cancelled'],
@@ -356,30 +356,30 @@ class MaintenanceRequestStateMachine:
         'closed': [],  # Terminal state
         'cancelled': [],  # Terminal state
     }
-
+    
     def transition_to(self, new_status, user=None):
         """
         Safely transition request to new status with validation.
-
+        
         Args:
             new_status: Target status
             user: User making the transition (for audit trail)
-
+        
         Raises:
             InvalidTransition: If transition is not allowed
             PermissionDenied: If user lacks permission for transition
         """
         if new_status not in self.VALID_TRANSITIONS[self.status]:
             raise InvalidTransition(f"Cannot transition from {self.status} to {new_status}")
-
+        
         if not self.can_user_transition(user, new_status):
             raise PermissionDenied(f"User {user} cannot transition to {new_status}")
-
+        
         # Update status and set timestamp
         old_status = self.status
         self.status = new_status
         self._set_status_timestamp(new_status)
-
+        
         # Trigger signals for notifications
         maintenance_status_changed.send(
             sender=self.__class__,
@@ -388,18 +388,18 @@ class MaintenanceRequestStateMachine:
             new_status=new_status,
             changed_by=user
         )
-
+        
         self.save()
 
     def _set_status_timestamp(self, status):
         """Set appropriate timestamp based on status."""
         timestamp_mapping = {
             'acknowledged': 'acknowledged_at',
-            'assigned': 'assigned_at',
+            'assigned': 'assigned_at', 
             'resolved': 'resolved_at',
             'closed': 'closed_at',
         }
-
+        
         if status in timestamp_mapping:
             setattr(self, timestamp_mapping[status], timezone.now())
 ```
@@ -412,12 +412,12 @@ class MaintenanceAssignmentService:
     Service class for handling maintenance request assignments.
     Implements business logic for staff assignment and workload balancing.
     """
-
+    
     @staticmethod
     def assign_request(request, staff_user, assigned_by_user):
         """
         Assign maintenance request to staff member.
-
+        
         Workflow:
         1. Validate staff can handle request
         2. Check staff availability/workload
@@ -429,32 +429,32 @@ class MaintenanceAssignmentService:
         # Validation
         if not request.can_be_assigned_to(staff_user):
             raise ValidationError("Staff member cannot handle this request type")
-
+        
         # Check workload (future enhancement)
         current_workload = MaintenanceRequest.objects.filter(
             assigned_to=staff_user,
             status__in=['assigned', 'in_progress']
         ).count()
-
+        
         if current_workload >= settings.MAX_CONCURRENT_ASSIGNMENTS:
             raise ValidationError("Staff member has reached maximum workload")
-
+        
         # Perform assignment
         request.assigned_to = staff_user
         request.assigned_by = assigned_by_user
         request.assigned_at = timezone.now()
-
+        
         # Transition status
         if request.status in ['submitted', 'acknowledged']:
             request.status = 'assigned'
-
+        
         request.save()
-
+        
         # Trigger notifications
         send_assignment_notification.delay(request.id, staff_user.id)
-
+        
         return request
-
+    
     @staticmethod
     def get_workload_stats(staff_user):
         """Get current workload statistics for staff member."""
@@ -485,60 +485,60 @@ class MaintenancePermissionMixin:
     Mixin for views that need maintenance-related permission checking.
     Provides methods for checking various maintenance permissions.
     """
-
+    
     def can_view_request(self, user, request):
         """Check if user can view specific maintenance request."""
         # Residents can view their own requests
         if user.is_resident() and request.resident == user:
             return True
-
+        
         # Staff permissions
         if user.is_staff_member():
             staff = user.staff
-
+            
             # Facility managers can view all
             if staff.can_access_all_maintenance:
                 return True
-
+            
             # Assigned staff can view their requests
             if request.assigned_to == user:
                 return True
-
+            
             # Supervisors can view subordinate's requests
             if request.assigned_to and request.assigned_to.staff.reporting_to == staff:
                 return True
-
+        
         return False
-
+    
     def can_assign_request(self, user, request):
         """Check if user can assign maintenance request."""
         if not user.is_staff_member():
             return False
-
+        
         return user.staff.can_assign_requests
-
+    
     def can_close_request(self, user, request):
         """Check if user can close maintenance request."""
         if not user.is_staff_member():
             return False
-
+        
         staff = user.staff
-
+        
         # Staff with close permission
         if staff.can_close_requests:
             return True
-
+        
         # Assigned staff can close their own requests
         if request.assigned_to == user:
             return True
-
+        
         return False
 
 # Decorator for view-level permission checking
 def require_maintenance_permission(permission_method):
     """
     Decorator to check maintenance permissions before view execution.
-
+    
     Usage:
     @require_maintenance_permission('can_assign_request')
     def assign_request_view(request, request_id):
@@ -547,10 +547,10 @@ def require_maintenance_permission(permission_method):
     def decorator(view_func):
         def wrapper(request, *args, **kwargs):
             maintenance_request = get_object_or_404(MaintenanceRequest, pk=kwargs['request_id'])
-
+            
             if not getattr(MaintenancePermissionMixin(), permission_method)(request.user, maintenance_request):
                 raise PermissionDenied("Insufficient permissions for this action")
-
+            
             return view_func(request, *args, **kwargs)
         return wrapper
     return decorator
@@ -568,39 +568,39 @@ class MaintenanceRequestListView(LoginRequiredMixin, ListView):
     model = MaintenanceRequest
     template_name = 'backend/maintenance/list.html'
     context_object_name = 'requests'
-
+    
     def get_queryset(self):
         """Filter requests based on user permissions."""
         user = self.request.user
-
+        
         if user.is_resident():
             # Residents see only their requests
             return MaintenanceRequest.objects.filter(resident=user)
-
+        
         elif user.is_staff_member():
             staff = user.staff
-
+            
             if staff.can_access_all_maintenance:
                 # Facility managers see all requests
                 return MaintenanceRequest.objects.all()
-
+            
             elif staff.can_handle_maintenance():
                 # Technical staff see assigned requests + unassigned in their domain
                 return MaintenanceRequest.objects.filter(
                     Q(assigned_to=user) |
                     Q(assigned_to__isnull=True, category__in=staff.get_expertise_categories())
                 )
-
+            
             else:
                 # Other staff see only assigned requests
                 return MaintenanceRequest.objects.filter(assigned_to=user)
-
+        
         return MaintenanceRequest.objects.none()
-
+    
     def get_context_data(self, **kwargs):
         """Add role-specific context data."""
         context = super().get_context_data(**kwargs)
-
+        
         if self.request.user.is_staff_member():
             context.update({
                 'can_assign': self.request.user.staff.can_assign_requests,
@@ -608,7 +608,7 @@ class MaintenanceRequestListView(LoginRequiredMixin, ListView):
                 'staff_list': Staff.objects.filter(is_active=True, can_handle_maintenance=True),
                 'workload_stats': get_workload_stats(self.request.user),
             })
-
+        
         return context
 ```
 
@@ -622,7 +622,7 @@ class MaintenanceRequestListView(LoginRequiredMixin, ListView):
 class StaffSignupForm(SignupForm):
     """
     Multi-step staff registration form with role-based permission assignment.
-
+    
     Workflow:
     1. Collect basic user information
     2. Collect staff-specific details
@@ -630,23 +630,23 @@ class StaffSignupForm(SignupForm):
     4. Set role-based permissions automatically
     5. Create User and Staff profiles atomically
     """
-
+    
     def __init__(self, *args, **kwargs):
         """
         Dynamic form initialization.
         Loads staff role choices from model to ensure consistency.
         """
         super().__init__(*args, **kwargs)
-
+        
         # Import here to avoid circular imports
         from the_khaki_estate.backend.models import Staff
-
+        
         # Dynamically set choices from model
         self.fields["staff_role"] = forms.ChoiceField(
             choices=Staff.STAFF_ROLES,
             widget=forms.Select(attrs={"class": "form-control"})
         )
-
+    
     def clean_employee_id(self):
         """Validate employee ID uniqueness across all staff."""
         employee_id = self.cleaned_data.get("employee_id")
@@ -655,11 +655,11 @@ class StaffSignupForm(SignupForm):
                 "This employee ID is already registered. Please use a different ID."
             )
         return employee_id
-
+    
     def save(self, request):
         """
         Atomic user and staff creation with role-based permissions.
-
+        
         Transaction ensures both User and Staff are created successfully
         or both operations are rolled back.
         """
@@ -669,10 +669,10 @@ class StaffSignupForm(SignupForm):
             user.user_type = "staff"
             user.name = f"{self.cleaned_data.get('first_name', '')} {self.cleaned_data.get('last_name', '')}".strip()
             user.save()
-
+            
             # Get role-based permissions
             permissions = self._get_default_permissions(self.cleaned_data["staff_role"])
-
+            
             # Create staff profile
             Staff.objects.create(
                 user=user,
@@ -681,12 +681,12 @@ class StaffSignupForm(SignupForm):
                 # ... other fields
                 **permissions
             )
-
+            
             # Trigger post-creation signals
             staff_created.send(sender=Staff, user=user, staff_role=self.cleaned_data["staff_role"])
-
+            
             return user
-
+    
     def _get_default_permissions(self, staff_role):
         """
         Get default permissions based on staff role.
@@ -705,7 +705,7 @@ class StaffSignupForm(SignupForm):
             },
             # ... other roles
         }
-
+        
         return permission_matrix.get(staff_role, {})
 ```
 
@@ -716,11 +716,11 @@ class MaintenanceRequestForm(forms.ModelForm):
     """
     Enhanced maintenance request form with staff assignment capabilities.
     """
-
+    
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-
+        
         # Customize assigned_to field based on user permissions
         if self.user and self.user.is_staff_member() and self.user.staff.can_assign_requests:
             self.fields['assigned_to'].queryset = Staff.objects.filter(
@@ -730,22 +730,22 @@ class MaintenanceRequestForm(forms.ModelForm):
         else:
             # Hide assignment field for users without permission
             del self.fields['assigned_to']
-
+    
     def clean(self):
         """Cross-field validation for maintenance requests."""
         cleaned_data = super().clean()
-
+        
         # Validate assignment permissions
         assigned_to = cleaned_data.get('assigned_to')
         if assigned_to and not self.instance.can_be_assigned_to(assigned_to):
             raise forms.ValidationError("Selected staff member cannot handle this request type")
-
+        
         # Validate priority vs category
         priority = cleaned_data.get('priority')
         category = cleaned_data.get('category')
         if priority and category and priority > category.priority_level:
             self.add_error('priority', 'Priority cannot exceed category maximum')
-
+        
         return cleaned_data
 ```
 
@@ -766,30 +766,30 @@ class MaintenanceRequestCreateView(LoginRequiredMixin, CreateView):
     model = MaintenanceRequest
     form_class = MaintenanceRequestForm
     template_name = 'backend/maintenance/create.html'
-
+    
     def get_form_kwargs(self):
         """Pass current user to form for permission-based customization."""
         kwargs = super().get_form_kwargs()
         kwargs['user'] = self.request.user
         return kwargs
-
+    
     def form_valid(self, form):
         """Set resident and trigger workflow."""
         form.instance.resident = self.request.user
-
+        
         # Auto-assign if staff member is creating for resident
         if self.request.user.is_staff_member() and not form.instance.resident:
             form.instance.resident = form.cleaned_data.get('resident')
-
+        
         response = super().form_valid(form)
-
+        
         # Trigger post-creation workflow
         maintenance_request_created.send(
             sender=MaintenanceRequest,
             instance=self.object,
             created_by=self.request.user
         )
-
+        
         return response
 
 class MaintenanceRequestAssignView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
@@ -799,29 +799,29 @@ class MaintenanceRequestAssignView(LoginRequiredMixin, UserPassesTestMixin, Upda
     model = MaintenanceRequest
     fields = ['assigned_to', 'estimated_completion', 'estimated_cost']
     template_name = 'backend/maintenance/assign.html'
-
+    
     def test_func(self):
         """Check if user can assign requests."""
-        return (self.request.user.is_staff_member() and
+        return (self.request.user.is_staff_member() and 
                 self.request.user.staff.can_assign_requests)
-
+    
     def form_valid(self, form):
         """Handle assignment with proper workflow."""
         request_obj = form.instance
         assigned_to = form.cleaned_data['assigned_to']
-
+        
         # Use assignment service for proper workflow
         MaintenanceAssignmentService.assign_request(
             request_obj,
             assigned_to,
             self.request.user
         )
-
+        
         messages.success(
             self.request,
             f"Request {request_obj.ticket_number} assigned to {assigned_to.name}"
         )
-
+        
         return redirect('backend:maintenance_detail', pk=request_obj.pk)
 
 class StaffDashboardView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
@@ -829,23 +829,23 @@ class StaffDashboardView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
     Role-based staff dashboard with personalized content.
     """
     template_name = 'backend/staff_dashboard.html'
-
+    
     def test_func(self):
         """Only staff members can access staff dashboard."""
         return self.request.user.is_staff_member()
-
+    
     def get_context_data(self, **kwargs):
         """Provide role-specific dashboard data."""
         context = super().get_context_data(**kwargs)
         staff = self.request.user.staff
-
+        
         # Base stats for all staff
         context.update({
             'staff_profile': staff,
             'my_requests': MaintenanceRequest.objects.filter(assigned_to=self.request.user),
             'workload_stats': MaintenanceAssignmentService.get_workload_stats(self.request.user),
         })
-
+        
         # Role-specific data
         if staff.is_facility_manager():
             context.update({
@@ -859,14 +859,14 @@ class StaffDashboardView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
                 ),
                 'team_performance': get_team_performance_stats(),
             })
-
+        
         elif staff.is_accountant():
             context.update({
                 'cost_summary': get_monthly_cost_summary(),
                 'budget_alerts': get_budget_alerts(),
                 'vendor_performance': get_vendor_stats(),
             })
-
+        
         return context
 ```
 
@@ -885,7 +885,7 @@ urlpatterns = [
         path('<int:pk>/update-status/', MaintenanceStatusUpdateView.as_view(), name='maintenance_update_status'),
         path('<int:pk>/close/', MaintenanceCloseView.as_view(), name='maintenance_close'),
     ])),
-
+    
     # Staff management
     path('staff/', include([
         path('dashboard/', StaffDashboardView.as_view(), name='staff_dashboard'),
@@ -893,7 +893,7 @@ urlpatterns = [
         path('workload/', StaffWorkloadView.as_view(), name='staff_workload'),
         path('performance/', StaffPerformanceView.as_view(), name='staff_performance'),
     ])),
-
+    
     # Admin/management views
     path('admin-panel/', include([
         path('staff-management/', StaffManagementView.as_view(), name='admin_staff_management'),
@@ -916,7 +916,7 @@ urlpatterns = [
 def send_assignment_notification(self, request_id, staff_user_id):
     """
     Send notification when maintenance request is assigned to staff.
-
+    
     Features:
     - Retry mechanism for failed deliveries
     - Multiple notification channels (email, SMS, in-app)
@@ -925,7 +925,7 @@ def send_assignment_notification(self, request_id, staff_user_id):
     try:
         request = MaintenanceRequest.objects.get(id=request_id)
         staff_user = User.objects.get(id=staff_user_id)
-
+        
         # Create in-app notification
         Notification.objects.create(
             recipient=staff_user,
@@ -939,7 +939,7 @@ def send_assignment_notification(self, request_id, staff_user_id):
                 'url': f'/backend/maintenance/{request.id}/'
             }
         )
-
+        
         # Send email if staff prefers email notifications
         if staff_user.staff.email_notifications:
             send_email_notification.delay(
@@ -950,14 +950,14 @@ def send_assignment_notification(self, request_id, staff_user_id):
                     'staff_member': staff_user.staff,
                 }
             )
-
+        
         # Send SMS for urgent requests if staff has SMS enabled
         if request.priority >= 3 and staff_user.staff.sms_notifications:
             send_sms_notification.delay(
                 staff_user.staff.phone_number,
                 f'URGENT: New maintenance assignment {request.ticket_number}. Check system for details.'
             )
-
+    
     except Exception as exc:
         # Retry with exponential backoff
         raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
@@ -966,7 +966,7 @@ def send_assignment_notification(self, request_id, staff_user_id):
 def process_overdue_requests():
     """
     Periodic task to identify and escalate overdue maintenance requests.
-
+    
     Runs every hour to:
     1. Identify overdue requests
     2. Send escalation notifications
@@ -977,17 +977,17 @@ def process_overdue_requests():
         estimated_completion__lt=timezone.now(),
         status__in=['assigned', 'in_progress']
     )
-
+    
     for request in overdue_requests:
         # Send escalation notification to facility manager
         facility_managers = Staff.objects.filter(
             staff_role='facility_manager',
             is_active=True
         )
-
+        
         for fm in facility_managers:
             send_escalation_notification.delay(request.id, fm.user.id)
-
+        
         # Log overdue status
         MaintenanceUpdate.objects.create(
             request=request,
@@ -1000,7 +1000,7 @@ def process_overdue_requests():
 def generate_staff_performance_report(staff_id, period='monthly'):
     """
     Generate comprehensive staff performance report.
-
+    
     Metrics calculated:
     - Request completion rate
     - Average resolution time
@@ -1009,19 +1009,19 @@ def generate_staff_performance_report(staff_id, period='monthly'):
     - Workload distribution
     """
     staff = Staff.objects.get(id=staff_id)
-
+    
     # Calculate date range
     if period == 'monthly':
         start_date = timezone.now().replace(day=1)
     elif period == 'weekly':
         start_date = timezone.now() - timedelta(days=7)
-
+    
     # Query performance data
     requests = MaintenanceRequest.objects.filter(
         assigned_to=staff.user,
         created_at__gte=start_date
     )
-
+    
     performance_data = {
         'total_requests': requests.count(),
         'completed_requests': requests.filter(status='closed').count(),
@@ -1030,7 +1030,7 @@ def generate_staff_performance_report(staff_id, period='monthly'):
         'cost_efficiency': calculate_cost_efficiency(requests),
         'on_time_completion': calculate_on_time_rate(requests),
     }
-
+    
     # Generate and store report
     report = StaffPerformanceReport.objects.create(
         staff=staff,
@@ -1038,7 +1038,7 @@ def generate_staff_performance_report(staff_id, period='monthly'):
         data=performance_data,
         generated_at=timezone.now()
     )
-
+    
     return report.id
 ```
 
@@ -1096,7 +1096,7 @@ User = get_user_model()
 def create_user_profile(sender, instance, created, **kwargs):
     """
     Automatically create appropriate profile when User is created.
-
+    
     Workflow:
     - If user_type='resident' → Create Resident profile
     - If user_type='staff' → Staff profile creation handled by StaffSignupForm
@@ -1116,7 +1116,7 @@ def create_user_profile(sender, instance, created, **kwargs):
 def handle_new_maintenance_request(sender, instance, created_by, **kwargs):
     """
     Handle new maintenance request creation workflow.
-
+    
     Actions:
     1. Send notification to facility managers
     2. Auto-assign if emergency priority
@@ -1129,16 +1129,16 @@ def handle_new_maintenance_request(sender, instance, created_by, **kwargs):
         is_active=True,
         email_notifications=True
     )
-
+    
     for fm in facility_managers:
         send_new_request_notification.delay(instance.id, fm.user.id)
-
+    
     # Auto-assign emergency requests
     if instance.priority == 4:  # Emergency
         suitable_staff = instance.get_suitable_staff().filter(
             is_available_24x7=True
         ).first()
-
+        
         if suitable_staff:
             instance.assign_to_staff(suitable_staff.user)
             send_emergency_assignment.delay(instance.id, suitable_staff.user.id)
@@ -1147,7 +1147,7 @@ def handle_new_maintenance_request(sender, instance, created_by, **kwargs):
 def handle_status_change(sender, instance, old_status, new_status, changed_by, **kwargs):
     """
     Handle maintenance request status changes.
-
+    
     Triggers different workflows based on status transition.
     """
     # Send notifications based on status
@@ -1158,11 +1158,11 @@ def handle_status_change(sender, instance, old_status, new_status, changed_by, *
         'resolved': send_completion_notification,
         'closed': send_closure_notification,
     }
-
+    
     if new_status in notification_mapping:
         # Notify resident
         notification_mapping[new_status].delay(instance.id, instance.resident.id)
-
+        
         # Notify relevant staff
         if instance.assigned_to:
             notification_mapping[new_status].delay(instance.id, instance.assigned_to.id)
@@ -1178,18 +1178,18 @@ def maintenance_request_audit_log(sender, instance, created, **kwargs):
         changed_fields = []
         if hasattr(instance, '_state') and instance._state.db:
             old_instance = MaintenanceRequest.objects.get(pk=instance.pk)
-
+            
             for field in instance._meta.fields:
                 old_value = getattr(old_instance, field.name)
                 new_value = getattr(instance, field.name)
-
+                
                 if old_value != new_value:
                     changed_fields.append({
                         'field': field.name,
                         'old_value': str(old_value),
                         'new_value': str(new_value)
                     })
-
+        
         # Create audit log entry
         MaintenanceAuditLog.objects.create(
             request=instance,
@@ -1202,7 +1202,7 @@ def maintenance_request_audit_log(sender, instance, created, **kwargs):
 def setup_staff_permissions(sender, user, staff_role, **kwargs):
     """
     Set up staff member permissions and initial configuration.
-
+    
     Actions:
     1. Configure notification preferences based on role
     2. Set up default work schedule
@@ -1210,7 +1210,7 @@ def setup_staff_permissions(sender, user, staff_role, **kwargs):
     4. Send welcome notification
     """
     staff = user.staff
-
+    
     # Role-based notification setup
     if staff_role in ['facility_manager', 'security_head']:
         staff.sms_notifications = True
@@ -1218,9 +1218,9 @@ def setup_staff_permissions(sender, user, staff_role, **kwargs):
     elif staff_role in ['electrician', 'plumber']:
         staff.sms_notifications = True
         staff.urgent_only = True
-
+    
     staff.save()
-
+    
     # Send welcome notification
     send_staff_welcome_notification.delay(user.id)
 ```
@@ -1236,31 +1236,31 @@ def setup_staff_permissions(sender, user, staff_role, **kwargs):
 class StaffAdmin(admin.ModelAdmin):
     """
     Comprehensive staff administration interface.
-
+    
     Features:
     - Role-based filtering and search
     - Permission management
     - Performance tracking integration
     - Bulk operations for staff management
     """
-
+    
     list_display = [
         'user', 'employee_id', 'staff_role', 'department',
         'employment_status', 'is_active', 'current_workload'
     ]
-
+    
     list_filter = [
         'staff_role', 'employment_status', 'is_active', 'department',
         'can_access_all_maintenance', 'can_assign_requests'
     ]
-
+    
     search_fields = [
         'user__username', 'user__email', 'user__name',
         'employee_id', 'phone_number', 'department'
     ]
-
+    
     actions = ['activate_staff', 'deactivate_staff', 'reset_permissions']
-
+    
     def current_workload(self, obj):
         """Display current workload for staff member."""
         return MaintenanceRequest.objects.filter(
@@ -1268,17 +1268,17 @@ class StaffAdmin(admin.ModelAdmin):
             status__in=['assigned', 'in_progress']
         ).count()
     current_workload.short_description = 'Active Requests'
-
+    
     def activate_staff(self, request, queryset):
         """Bulk activate staff members."""
         updated = queryset.update(is_active=True)
         self.message_user(request, f'{updated} staff members activated.')
-
+    
     def deactivate_staff(self, request, queryset):
         """Bulk deactivate staff members."""
         updated = queryset.update(is_active=False)
         self.message_user(request, f'{updated} staff members deactivated.')
-
+    
     def reset_permissions(self, request, queryset):
         """Reset permissions to role defaults."""
         for staff in queryset:
@@ -1292,25 +1292,25 @@ class StaffAdmin(admin.ModelAdmin):
 class MaintenanceRequestAdmin(admin.ModelAdmin):
     """
     Enhanced maintenance request administration.
-
+    
     Features:
     - Staff assignment with filtering
     - Status workflow management
     - Cost tracking and analysis
     - Performance metrics integration
     """
-
+    
     list_display = [
         'ticket_number', 'title', 'resident', 'category',
         'priority', 'status', 'assigned_to', 'is_overdue',
         'cost_variance', 'resident_rating'
     ]
-
+    
     list_filter = [
         'status', 'priority', 'category', 'assigned_to',
         'created_at', 'resolved_at'
     ]
-
+    
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         """Customize assignment field to show only suitable staff."""
         if db_field.name == "assigned_to":
@@ -1323,13 +1323,13 @@ class MaintenanceRequestAdmin(admin.ModelAdmin):
                 Q(staff__staff_role__in=['electrician', 'plumber', 'maintenance_supervisor'])
             )
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
-
+    
     def is_overdue(self, obj):
         """Display overdue status with color coding."""
         return obj.is_overdue()
     is_overdue.boolean = True
     is_overdue.short_description = 'Overdue'
-
+    
     def cost_variance(self, obj):
         """Display cost variance (actual vs estimated)."""
         if obj.estimated_cost and obj.actual_cost:
@@ -1337,9 +1337,9 @@ class MaintenanceRequestAdmin(admin.ModelAdmin):
             return f"₹{variance:+.2f}"
         return "-"
     cost_variance.short_description = 'Cost Variance'
-
+    
     actions = ['bulk_assign', 'mark_acknowledged', 'generate_report']
-
+    
     def bulk_assign(self, request, queryset):
         """Bulk assign requests to staff members."""
         # Custom admin action for bulk operations
@@ -1360,7 +1360,7 @@ class TestMaintenanceWorkflow:
     Integration tests for complete maintenance workflow.
     Tests the entire flow from submission to closure.
     """
-
+    
     @pytest.fixture
     def setup_users(self):
         """Create test users with proper relationships."""
@@ -1370,14 +1370,14 @@ class TestMaintenanceWorkflow:
             email='resident@test.com',
             user_type='resident'
         )
-
+        
         # Create staff members
         fm_user = User.objects.create_user(
             username='facility_manager',
             email='fm@test.com',
             user_type='staff'
         )
-
+        
         facility_manager = Staff.objects.create(
             user=fm_user,
             employee_id='FM001',
@@ -1386,12 +1386,12 @@ class TestMaintenanceWorkflow:
             can_assign_requests=True,
             can_close_requests=True
         )
-
+        
         return {
             'resident': resident_user,
             'facility_manager': facility_manager,
         }
-
+    
     def test_complete_workflow(self, setup_users):
         """Test end-to-end maintenance workflow."""
         # 1. Create request
@@ -1402,23 +1402,23 @@ class TestMaintenanceWorkflow:
             priority=3,
             status='submitted'
         )
-
+        
         # 2. Acknowledge
         request.status = 'acknowledged'
         request.save()
         assert request.acknowledged_at is not None
-
+        
         # 3. Assign
         fm = setup_users['facility_manager']
         request.assign_to_staff(fm.user, fm.user)
         assert request.status == 'assigned'
         assert request.assigned_to == fm.user
-
+        
         # 4. Complete workflow
         request.status = 'resolved'
         request.save()
         assert request.resolved_at is not None
-
+        
         # 5. Verify resolution time calculation
         resolution_time = request.get_resolution_time()
         assert resolution_time is not None
@@ -1434,13 +1434,13 @@ class StaffFactory(DjangoModelFactory):
     Factory for creating Staff instances with realistic data.
     Supports all staff roles with appropriate default permissions.
     """
-
+    
     user = SubFactory(StaffUserFactory)
     employee_id = Faker("bothify", text="EMP###")
     staff_role = Faker("random_element", elements=[
         "facility_manager", "accountant", "electrician", "plumber"
     ])
-
+    
     # Role-based permission assignment
     can_access_all_maintenance = LazyAttribute(
         lambda obj: obj.staff_role in ["facility_manager", "maintenance_supervisor"]
@@ -1448,7 +1448,7 @@ class StaffFactory(DjangoModelFactory):
     can_assign_requests = LazyAttribute(
         lambda obj: obj.staff_role in ["facility_manager", "maintenance_supervisor"]
     )
-
+    
     class Meta:
         model = Staff
         django_get_or_create = ["employee_id"]
@@ -1457,7 +1457,7 @@ class StaffFactory(DjangoModelFactory):
 def test_staff_permissions():
     facility_manager = StaffFactory(staff_role="facility_manager")
     electrician = StaffFactory(staff_role="electrician")
-
+    
     assert facility_manager.can_access_all_maintenance is True
     assert electrician.can_access_all_maintenance is False
 ```
@@ -1478,7 +1478,7 @@ class StaffSerializer(serializers.ModelSerializer):
     user_details = UserSerializer(source='user', read_only=True)
     current_workload = serializers.SerializerMethodField()
     performance_metrics = serializers.SerializerMethodField()
-
+    
     class Meta:
         model = Staff
         fields = [
@@ -1486,14 +1486,14 @@ class StaffSerializer(serializers.ModelSerializer):
             'user_details', 'current_workload', 'performance_metrics',
             'can_access_all_maintenance', 'can_assign_requests'
         ]
-
+    
     def get_current_workload(self, obj):
         """Get current active requests assigned to staff."""
         return MaintenanceRequest.objects.filter(
             assigned_to=obj.user,
             status__in=['assigned', 'in_progress']
         ).count()
-
+    
     def get_performance_metrics(self, obj):
         """Get performance metrics for staff member."""
         return MaintenanceAssignmentService.get_workload_stats(obj.user)
@@ -1505,11 +1505,11 @@ class MaintenanceRequestSerializer(serializers.ModelSerializer):
     assigned_to_details = StaffSerializer(source='assigned_to.staff', read_only=True)
     resident_details = ResidentSerializer(source='resident.resident', read_only=True)
     suitable_staff = serializers.SerializerMethodField()
-
+    
     class Meta:
         model = MaintenanceRequest
         fields = '__all__'
-
+    
     def get_suitable_staff(self, obj):
         """Get list of staff members who can handle this request."""
         suitable = obj.get_suitable_staff()
@@ -1527,26 +1527,26 @@ class MaintenanceRequestViewSet(viewsets.ModelViewSet):
     filterset_fields = ['status', 'priority', 'category', 'assigned_to']
     search_fields = ['title', 'description', 'ticket_number']
     ordering_fields = ['created_at', 'priority', 'estimated_completion']
-
+    
     def get_queryset(self):
         """Return requests based on user permissions."""
         user = self.request.user
-
+        
         if user.is_resident():
             return MaintenanceRequest.objects.filter(resident=user)
         elif user.is_staff_member() and user.staff.can_access_all_maintenance:
             return MaintenanceRequest.objects.all()
         elif user.is_staff_member():
             return MaintenanceRequest.objects.filter(assigned_to=user)
-
+        
         return MaintenanceRequest.objects.none()
-
+    
     @action(detail=True, methods=['post'])
     def assign(self, request, pk=None):
         """Assign request to staff member."""
         maintenance_request = self.get_object()
         staff_user_id = request.data.get('staff_user_id')
-
+        
         try:
             staff_user = User.objects.get(id=staff_user_id, user_type='staff')
             MaintenanceAssignmentService.assign_request(
@@ -1557,13 +1557,13 @@ class MaintenanceRequestViewSet(viewsets.ModelViewSet):
             return Response({'status': 'assigned'})
         except ValidationError as e:
             return Response({'error': str(e)}, status=400)
-
+    
     @action(detail=True, methods=['post'])
     def update_status(self, request, pk=None):
         """Update request status with workflow validation."""
         maintenance_request = self.get_object()
         new_status = request.data.get('status')
-
+        
         try:
             maintenance_request.transition_to(new_status, request.user)
             return Response({'status': 'updated'})
@@ -1576,14 +1576,14 @@ class StaffViewSet(viewsets.ModelViewSet):
     """
     serializer_class = StaffSerializer
     permission_classes = [IsAuthenticated, IsStaffOrAdmin]
-
+    
     @action(detail=True, methods=['get'])
     def performance(self, request, pk=None):
         """Get performance metrics for staff member."""
         staff = self.get_object()
         metrics = generate_staff_performance_report.delay(staff.id, 'monthly')
         return Response({'report_id': metrics.id})
-
+    
     @action(detail=True, methods=['get'])
     def workload(self, request, pk=None):
         """Get current workload for staff member."""
@@ -1605,7 +1605,7 @@ class OptimizedMaintenanceQuerySet(models.QuerySet):
     """
     Custom QuerySet with optimized queries for maintenance requests.
     """
-
+    
     def with_staff_details(self):
         """Prefetch staff and user details to avoid N+1 queries."""
         return self.select_related(
@@ -1617,13 +1617,13 @@ class OptimizedMaintenanceQuerySet(models.QuerySet):
             'assigned_to__staff',
             'updates__author'
         )
-
+    
     def for_staff_dashboard(self, staff_user):
         """Optimized query for staff dashboard."""
         return self.with_staff_details().filter(
             assigned_to=staff_user
         ).order_by('-priority', '-created_at')
-
+    
     def overdue_requests(self):
         """Get overdue requests with minimal queries."""
         return self.filter(
@@ -1633,14 +1633,14 @@ class OptimizedMaintenanceQuerySet(models.QuerySet):
 
 class MaintenanceRequest(models.Model):
     objects = OptimizedMaintenanceQuerySet.as_manager()
-
+    
     # ... model fields ...
 
 # Usage in views
 def staff_dashboard_view(request):
     # Optimized query - single DB hit
     my_requests = MaintenanceRequest.objects.for_staff_dashboard(request.user)
-
+    
     # Aggregate data efficiently
     stats = MaintenanceRequest.objects.filter(
         assigned_to=request.user
@@ -1666,12 +1666,12 @@ from django.views.decorators.cache import cache_page
 def staff_performance_api(request, staff_id):
     """Cached staff performance data."""
     cache_key = f'staff_performance_{staff_id}_{timezone.now().date()}'
-
+    
     performance_data = cache.get(cache_key)
     if not performance_data:
         performance_data = calculate_staff_performance(staff_id)
         cache.set(cache_key, performance_data, 60 * 60)  # Cache for 1 hour
-
+    
     return JsonResponse(performance_data)
 
 # Cache invalidation on status changes
@@ -1797,7 +1797,7 @@ def assign_maintenance_request(request, staff_user, assigned_by):
         f"Maintenance assignment: {request.ticket_number} "
         f"assigned to {staff_user.username} by {assigned_by.username}"
     )
-
+    
     try:
         result = MaintenanceAssignmentService.assign_request(request, staff_user, assigned_by)
         logger.info(f"Assignment successful: {request.ticket_number}")
@@ -1821,22 +1821,22 @@ class Command(BaseCommand):
     Diagnostic command for maintenance system debugging.
     """
     help = 'Run diagnostics on maintenance staff system'
-
+    
     def add_arguments(self, parser):
         parser.add_argument('--check-permissions', action='store_true')
         parser.add_argument('--verify-assignments', action='store_true')
         parser.add_argument('--performance-report', action='store_true')
-
+    
     def handle(self, *args, **options):
         if options['check_permissions']:
             self.check_staff_permissions()
-
+        
         if options['verify_assignments']:
             self.verify_request_assignments()
-
+        
         if options['performance_report']:
             self.generate_system_performance_report()
-
+    
     def check_staff_permissions(self):
         """Verify all staff have correct permissions for their roles."""
         for staff in Staff.objects.all():
@@ -1848,12 +1848,12 @@ class Command(BaseCommand):
                 'can_manage_finances': staff.can_manage_finances,
                 'can_send_announcements': staff.can_send_announcements,
             }
-
+            
             mismatches = []
             for perm, expected in expected_perms.items():
                 if actual_perms.get(perm) != expected:
                     mismatches.append(f"{perm}: expected {expected}, got {actual_perms.get(perm)}")
-
+            
             if mismatches:
                 self.stdout.write(
                     self.style.WARNING(f"Permission mismatches for {staff}: {mismatches}")
@@ -1878,7 +1878,7 @@ def create_sample_maintenance_scenario():
     resident = create_test_resident('alice', 'alice@test.com', '101')
     fm = create_test_staff('john', 'facility_manager', 'FM001')
     electrician = create_test_staff('mike', 'electrician', 'EL001')
-
+    
     # Create maintenance request
     request = MaintenanceRequest.objects.create(
         resident=resident,
@@ -1889,13 +1889,13 @@ def create_sample_maintenance_scenario():
         priority=3,
         status='submitted'
     )
-
+    
     # Simulate workflow
     request.status = 'acknowledged'
     request.save()
-
+    
     request.assign_to_staff(electrician, fm)
-
+    
     return {
         'request': request,
         'resident': resident,
@@ -1924,26 +1924,26 @@ class MaintenanceAnalytics:
     """
     Analytics engine for maintenance system performance tracking.
     """
-
+    
     @staticmethod
     def calculate_staff_efficiency(staff_user, period_days=30):
         """
         Calculate comprehensive staff efficiency metrics.
-
+        
         Returns:
             dict: Performance metrics including resolution time,
                   satisfaction scores, cost efficiency
         """
         end_date = timezone.now()
         start_date = end_date - timedelta(days=period_days)
-
+        
         requests = MaintenanceRequest.objects.filter(
             assigned_to=staff_user,
             created_at__range=[start_date, end_date]
         )
-
+        
         completed_requests = requests.filter(status='closed')
-
+        
         metrics = {
             'total_requests': requests.count(),
             'completed_requests': completed_requests.count(),
@@ -1955,9 +1955,9 @@ class MaintenanceAnalytics:
             'cost_efficiency': calculate_cost_efficiency(completed_requests),
             'on_time_completion_rate': calculate_on_time_rate(completed_requests),
         }
-
+        
         return metrics
-
+    
     @staticmethod
     def system_performance_dashboard():
         """Generate system-wide performance dashboard data."""
@@ -1981,15 +1981,15 @@ def calculate_avg_resolution_time(queryset):
         resolved_at__isnull=False,
         created_at__isnull=False
     )
-
+    
     if not completed.exists():
         return timedelta(0)
-
+    
     total_time = sum(
-        (req.resolved_at - req.created_at).total_seconds()
+        (req.resolved_at - req.created_at).total_seconds() 
         for req in completed
     )
-
+    
     return timedelta(seconds=total_time / completed.count())
 ```
 
@@ -2123,7 +2123,7 @@ alias khaki-test="cd /Users/sanjaysingh/non_icloud/software_development_MBP_2025
 #### **Documentation Access URLs**
 
 - **MkDocs Documentation**: http://localhost:8000
-- **Django Application**: http://localhost:8001
+- **Django Application**: http://localhost:8001  
 - **Sphinx Documentation**: http://localhost:8080
 - **Sphinx Live Reload**: http://localhost:9000
 
@@ -2186,7 +2186,7 @@ def create_facility_manager(username, email, name, employee_id):
         name=name,
         user_type='staff'
     )
-
+    
     staff = Staff.objects.create(
         user=user,
         employee_id=employee_id,
@@ -2198,7 +2198,7 @@ def create_facility_manager(username, email, name, employee_id):
         can_close_requests=True,
         can_send_announcements=True,
     )
-
+    
     return user, staff
 
 # 2. Assignment workflow
@@ -2207,35 +2207,35 @@ def assign_electrical_request(request_id, electrician_id, facility_manager_id):
     request = MaintenanceRequest.objects.get(id=request_id)
     electrician = User.objects.get(id=electrician_id)
     fm = User.objects.get(id=facility_manager_id)
-
+    
     # Validate assignment
     if not request.can_be_assigned_to(electrician):
         raise ValidationError("Electrician cannot handle this request")
-
+    
     # Perform assignment
     request.assign_to_staff(electrician, fm)
-
+    
     # Set estimated completion based on category
     hours = request.category.estimated_resolution_hours
     request.estimated_completion = timezone.now() + timedelta(hours=hours)
     request.save()
-
+    
     return request
 
 # 3. Status update with validation
 def update_request_status(request_id, new_status, user, notes=None):
     """Standard pattern for status updates with validation."""
     request = MaintenanceRequest.objects.get(id=request_id)
-
+    
     # Permission check
     if not can_update_status(user, request, new_status):
         raise PermissionDenied("User cannot update to this status")
-
+    
     # Status transition
     old_status = request.status
     request.status = new_status
     request.save()
-
+    
     # Add update note
     if notes:
         MaintenanceUpdate.objects.create(
@@ -2244,10 +2244,10 @@ def update_request_status(request_id, new_status, user, notes=None):
             content=notes,
             status_changed_to=new_status
         )
-
+    
     # Trigger notifications
     notify_status_change.delay(request.id, old_status, new_status)
-
+    
     return request
 ```
 
@@ -2324,6 +2324,6 @@ the_khaki_estate/
 
 **This technical documentation is maintained alongside the codebase. For questions or contributions, please refer to the development team or create an issue in the project repository.**
 
-**Last Updated**: December 2024
-**Documentation Version**: 2.0
+**Last Updated**: December 2024  
+**Documentation Version**: 2.0  
 **System Version**: The Khaki Estate Management System v2.0

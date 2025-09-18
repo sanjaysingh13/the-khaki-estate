@@ -13,6 +13,14 @@ Welcome to The Khaki Estate's documentation!
    howto
    users
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Project Documentation:
+
+   USER_GUIDE
+   TECHNICAL_DOCUMENTATION
+   RESIDENT_REGISTRATION_GUIDE
+
 
 
 Indices and tables

@@ -41,7 +41,19 @@ author = "Sanjay Singh"
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
+    "myst_parser",
 ]
+
+# MyST parser configuration
+myst_enable_extensions = [
+    "deflist",
+    "tasklist",
+    "html_admonition",
+    "html_image",
+]
+
+# Source file suffixes
+source_suffix = ['.rst', '.md']
 
 # Add any paths that contain templates here, relative to this directory.
 # templates_path = ["_templates"]
