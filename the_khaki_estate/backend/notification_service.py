@@ -1,3 +1,8 @@
+from django.utils import timezone
+from .models import Notification, NotificationType
+from .tasks import send_notification_task
+
+
 class NotificationService:
     """Service class to handle all notification logic"""
 
@@ -50,19 +55,41 @@ class NotificationService:
         # Determine delivery method
         delivery_method = force_delivery or notification_type.default_delivery
 
+        # Get user notification preferences from their profile
+        email_notifications = True  # Default
+        sms_notifications = False   # Default
+        urgent_only = False        # Default
+        
+        try:
+            # Try to get preferences from Resident profile
+            if hasattr(recipient, 'resident'):
+                profile = recipient.resident
+                email_notifications = profile.email_notifications
+                sms_notifications = profile.sms_notifications
+                urgent_only = profile.urgent_only
+            # Try to get preferences from Staff profile
+            elif hasattr(recipient, 'staff'):
+                profile = recipient.staff
+                email_notifications = profile.email_notifications
+                sms_notifications = profile.sms_notifications
+                urgent_only = profile.urgent_only
+        except:
+            # Use defaults if no profile found
+            pass
+
         # Respect user preferences
-        if not recipient.email_notifications and "email" in delivery_method:
+        if not email_notifications and "email" in delivery_method:
             delivery_method = delivery_method.replace("email", "").replace(
                 "both", "sms"
             )
 
-        if not recipient.sms_notifications and "sms" in delivery_method:
+        if not sms_notifications and "sms" in delivery_method:
             delivery_method = delivery_method.replace("sms", "").replace(
                 "both", "email"
             )
 
         # Only urgent notifications if user chose urgent_only
-        if recipient.urgent_only and not notification_type.is_urgent:
+        if urgent_only and not notification_type.is_urgent:
             delivery_method = "in_app"
 
         # Send notification asynchronously
@@ -104,7 +131,7 @@ class NotificationService:
         exclude_residents=None,
     ):
         """Send notification to all active residents"""
-        residents = Resident.objects.filter(is_active=True)
+        residents = Resident.objects.filter(user__is_active=True)
         if exclude_residents:
             residents = residents.exclude(id__in=[r.id for r in exclude_residents])
 

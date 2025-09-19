@@ -51,6 +51,38 @@ def is_committee_member(user):
     else:
         return resident.is_committee_member
 
+
+def is_staff_member(user):
+    """
+    Check if user is a staff member
+    """
+    try:
+        staff = user.staff
+        return staff.is_active
+    except:
+        return False
+
+
+def can_manage_maintenance(user):
+    """
+    Check if user can manage maintenance requests
+    (either committee member or staff with appropriate permissions)
+    """
+    # Check if user is committee member
+    if is_committee_member(user):
+        return True
+    
+    # Check if user is staff with maintenance permissions
+    try:
+        staff = user.staff
+        return staff.is_active and (
+            staff.can_access_all_maintenance or 
+            staff.can_assign_requests or
+            staff.staff_role in ['facility_manager', 'maintenance_supervisor']
+        )
+    except:
+        return False
+
 # ============================================================================
 # DASHBOARD VIEWS - Main landing pages for residents and management
 # ============================================================================
@@ -75,8 +107,8 @@ def dashboard(request):
         status__in=['sent', 'delivered']
     ).count()
     
-    if user.is_committee_member:
-        # Committee member dashboard - show management data
+    if is_committee_member(user) or can_manage_maintenance(user):
+        # Management dashboard - show management data for committee members and staff
         pending_maintenance = MaintenanceRequest.objects.filter(
             status__in=['submitted', 'acknowledged']
         ).count()
@@ -89,6 +121,21 @@ def dashboard(request):
             booking_date__gte=timezone.now().date()
         ).order_by('booking_date', 'start_time')[:5]
         
+        # Staff-specific data
+        staff_info = None
+        if is_staff_member(user):
+            try:
+                staff = user.staff
+                staff_info = {
+                    'role': staff.get_staff_role_display(),
+                    'department': staff.department,
+                    'can_access_all_maintenance': staff.can_access_all_maintenance,
+                    'can_assign_requests': staff.can_assign_requests,
+                    'can_close_requests': staff.can_close_requests,
+                }
+            except:
+                staff_info = None
+        
         context = {
             'user': user,
             'recent_announcements': recent_announcements,
@@ -96,7 +143,10 @@ def dashboard(request):
             'pending_maintenance': pending_maintenance,
             'upcoming_events': upcoming_events,
             'recent_bookings': recent_bookings,
-            'is_committee': True,
+            'is_committee': is_committee_member(user),
+            'is_staff': is_staff_member(user),
+            'staff_info': staff_info,
+            'can_manage_maintenance': can_manage_maintenance(user),
         }
     else:
         # Regular resident dashboard
@@ -209,7 +259,7 @@ def announcement_detail(request, announcement_id):
     # Get read statistics for committee members
     read_stats = None
     if is_committee_member(request.user):
-        total_residents = Resident.objects.filter(is_active=True).count()
+        total_residents = Resident.objects.filter(user__is_active=True).count()
         read_count = AnnouncementRead.objects.filter(announcement=announcement).count()
         read_stats = {
             'read_count': read_count,
@@ -381,8 +431,8 @@ def maintenance_request_list(request):
     Display maintenance requests with filtering and status management
     Different views for residents (their requests) and committee (all requests)
     """
-    if is_committee_member(request.user):
-        # Committee members see all requests
+    if can_manage_maintenance(request.user):
+        # Committee members and authorized staff see all requests
         requests = MaintenanceRequest.objects.all().order_by('-created_at')
         
         # Filter by status
@@ -431,7 +481,7 @@ def maintenance_request_detail(request, request_id):
     maintenance_request = get_object_or_404(MaintenanceRequest, id=request_id)
     
     # Check if user has permission to view this request
-    if not is_committee_member(request.user) and maintenance_request.resident != request.user:
+    if not can_manage_maintenance(request.user) and maintenance_request.resident != request.user:
         messages.error(request, 'You do not have permission to view this request.')
         return redirect('backend:maintenance_list')
     
@@ -439,13 +489,13 @@ def maintenance_request_detail(request, request_id):
     updates = MaintenanceUpdate.objects.filter(request=maintenance_request).order_by('created_at')
     
     # Get available staff for assignment (committee members)
-    available_staff = Resident.objects.filter(is_committee_member=True, is_active=True)
+    available_staff = Resident.objects.filter(is_committee_member=True, user__is_active=True)
     
     context = {
         'request': maintenance_request,
         'updates': updates,
         'available_staff': available_staff,
-        'can_manage': is_committee_member(request.user),
+        'can_manage': can_manage_maintenance(request.user),
         'is_owner': maintenance_request.resident == request.user,
     }
     
@@ -514,7 +564,7 @@ def update_maintenance_status(request, request_id):
     """
     maintenance_request = get_object_or_404(MaintenanceRequest, id=request_id)
     
-    if not is_committee_member(request.user):
+    if not can_manage_maintenance(request.user):
         return JsonResponse({'status': 'error', 'message': 'Permission denied'})
     
     new_status = request.POST.get('status')
@@ -775,7 +825,7 @@ def booking_detail(request, booking_id):
     
     context = {
         'booking': booking,
-        'can_manage': is_committee_member(request.user),
+        'can_manage': can_manage_maintenance(request.user),
         'is_owner': booking.resident == request.user,
     }
     
@@ -789,7 +839,7 @@ def update_booking_status(request, booking_id):
     """
     booking = get_object_or_404(Booking, id=booking_id)
     
-    if not is_committee_member(request.user):
+    if not can_manage_maintenance(request.user):
         return JsonResponse({'status': 'error', 'message': 'Permission denied'})
     
     new_status = request.POST.get('status')

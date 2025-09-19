@@ -15,6 +15,16 @@ def send_notification_task(notification_id, delivery_method):
 
         success = True
 
+        # Get user's phone number from profile
+        phone_number = None
+        try:
+            if hasattr(recipient, 'resident'):
+                phone_number = recipient.resident.phone_number
+            elif hasattr(recipient, 'staff'):
+                phone_number = recipient.staff.phone_number
+        except:
+            pass
+
         # Send Email
         if "email" in delivery_method and recipient.email:
             try:
@@ -25,28 +35,24 @@ def send_notification_task(notification_id, delivery_method):
                     "data": notification.data,
                 }
 
-                html_message = render_to_string(
-                    f"notifications/{notification.notification_type.template_name}",
-                    context,
-                )
-
+                # For now, send simple text email since we don't have templates
                 send_mail(
                     subject=notification.title,
-                    message=notification.message,  # Plain text fallback
-                    from_email="noreply@yourhousing.com",
+                    message=notification.message,
+                    from_email="noreply@thekhakie state.com",
                     recipient_list=[recipient.email],
-                    html_message=html_message,
                     fail_silently=False,
                 )
 
                 notification.email_sent = True
+                print(f"📧 Email sent to {recipient.email}: {notification.title}")
 
             except Exception as e:
                 success = False
-                print(f"Email send failed: {e}")
+                print(f"❌ Email send failed: {e}")
 
         # Send SMS
-        if "sms" in delivery_method and recipient.phone_number:
+        if "sms" in delivery_method and phone_number:
             try:
                 # Use your SMS service (Twilio, etc.)
                 sms_message = (
@@ -60,7 +66,8 @@ def send_notification_task(notification_id, delivery_method):
                 )
 
                 # SMS sending code here
-                # send_sms(recipient.phone_number, sms_message)
+                # send_sms(phone_number, sms_message)
+                print(f"📱 SMS would be sent to {phone_number}: {sms_message}")
 
                 notification.sms_sent = True
 

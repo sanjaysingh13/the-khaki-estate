@@ -313,8 +313,14 @@ class NotificationServiceTest(TestCase):
         Should create notifications for all active residents.
         """
         # Create additional residents
-        additional_resident1 = ResidentFactory(is_active=True)
-        additional_resident2 = ResidentFactory(is_active=False)  # Inactive resident
+        from the_khaki_estate.users.tests.factories import ResidentUserFactory
+        
+        # Create residents with active/inactive users
+        active_user = ResidentUserFactory(is_active=True)
+        inactive_user = ResidentUserFactory(is_active=False)
+        
+        additional_resident1 = ResidentFactory(user=active_user)
+        additional_resident2 = ResidentFactory(user=inactive_user)  # Inactive user
 
         with patch(
             "the_khaki_estate.backend.notification_service.send_notification_task"
