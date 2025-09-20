@@ -3,7 +3,6 @@ from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
 from django.db import IntegrityError
 from django.db.models import Count
@@ -13,6 +12,7 @@ from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.shortcuts import render
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .models import Announcement
@@ -203,7 +203,9 @@ def announcement_list(request):
     Supports filtering by category, urgency, and read status
     """
     announcements = Announcement.objects.all().order_by(
-        "-is_pinned", "-is_urgent", "-created_at"
+        "-is_pinned",
+        "-is_urgent",
+        "-created_at",
     )
 
     # Filter by category if specified
@@ -220,12 +222,12 @@ def announcement_list(request):
     read_status = request.GET.get("read")
     if read_status == "unread":
         read_announcements = AnnouncementRead.objects.filter(
-            resident=request.user
+            resident=request.user,
         ).values_list("announcement_id", flat=True)
         announcements = announcements.exclude(id__in=read_announcements)
     elif read_status == "read":
         read_announcements = AnnouncementRead.objects.filter(
-            resident=request.user
+            resident=request.user,
         ).values_list("announcement_id", flat=True)
         announcements = announcements.filter(id__in=read_announcements)
 
@@ -279,7 +281,7 @@ def announcement_detail(request, announcement_id):
 
     # Get comments (including replies)
     comments = Comment.objects.filter(announcement=announcement, parent=None).order_by(
-        "created_at"
+        "created_at",
     )
 
     # Get read statistics for committee members
@@ -355,7 +357,8 @@ def announcement_create(request):
 
             messages.success(request, f'Announcement "{title}" created successfully!')
             return redirect(
-                "backend:announcement_detail", announcement_id=announcement.id
+                "backend:announcement_detail",
+                announcement_id=announcement.id,
             )
 
         except AnnouncementCategory.DoesNotExist:
@@ -429,7 +432,7 @@ def add_comment(request, announcement_id):
 
     if not content:
         return JsonResponse(
-            {"status": "error", "message": "Comment content is required"}
+            {"status": "error", "message": "Comment content is required"},
         )
 
     try:
@@ -454,7 +457,7 @@ def add_comment(request, announcement_id):
                     "created_at": comment.created_at.isoformat(),
                     "parent_id": parent.id if parent else None,
                 },
-            }
+            },
         )
 
     except Comment.DoesNotExist:
@@ -496,7 +499,7 @@ def maintenance_request_list(request):
     else:
         # Residents see only their requests
         requests = MaintenanceRequest.objects.filter(resident=request.user).order_by(
-            "-created_at"
+            "-created_at",
         )
 
     # Pagination
@@ -536,12 +539,13 @@ def maintenance_request_detail(request, request_id):
 
     # Get all updates for this request
     updates = MaintenanceUpdate.objects.filter(request=maintenance_request).order_by(
-        "created_at"
+        "created_at",
     )
 
     # Get available staff for assignment (committee members)
     available_staff = Resident.objects.filter(
-        is_committee_member=True, user__is_active=True
+        is_committee_member=True,
+        user__is_active=True,
     )
 
     context = {
@@ -599,7 +603,8 @@ def maintenance_request_create(request):
                 f"Maintenance request {maintenance_request.ticket_number} created successfully!",
             )
             return redirect(
-                "backend:maintenance_detail", request_id=maintenance_request.id
+                "backend:maintenance_detail",
+                request_id=maintenance_request.id,
             )
 
         except MaintenanceCategory.DoesNotExist:
@@ -641,7 +646,8 @@ def update_maintenance_status(request, request_id):
         # Update assignment if provided
         if assigned_to_id:
             assigned_user = Resident.objects.get(
-                id=assigned_to_id, is_committee_member=True
+                id=assigned_to_id,
+                is_committee_member=True,
             )
             maintenance_request.assigned_to = assigned_user
 
@@ -662,35 +668,37 @@ def update_maintenance_status(request, request_id):
 
         # Send notification to resident about status change
         from .notification_service import NotificationService
-        
+
         status_messages = {
-            'submitted': 'Your maintenance request has been submitted',
-            'acknowledged': 'Your maintenance request has been acknowledged and is being reviewed',
-            'assigned': 'Your maintenance request has been assigned to our team',
-            'in_progress': 'Work has started on your maintenance request',
-            'resolved': 'Your maintenance request has been completed! Please check and confirm.',
-            'closed': 'Your maintenance request has been closed',
-            'cancelled': 'Your maintenance request has been cancelled',
+            "submitted": "Your maintenance request has been submitted",
+            "acknowledged": "Your maintenance request has been acknowledged and is being reviewed",
+            "assigned": "Your maintenance request has been assigned to our team",
+            "in_progress": "Work has started on your maintenance request",
+            "resolved": "Your maintenance request has been completed! Please check and confirm.",
+            "closed": "Your maintenance request has been closed",
+            "cancelled": "Your maintenance request has been cancelled",
         }
-        
-        status_message = status_messages.get(new_status, f'Status updated to {new_status}')
-        
+
+        status_message = status_messages.get(
+            new_status, f"Status updated to {new_status}"
+        )
+
         NotificationService.create_notification(
             recipient=maintenance_request.resident,
-            notification_type_name='maintenance_status_change',
-            title=f'Status Update: {maintenance_request.ticket_number}',
+            notification_type_name="maintenance_status_change",
+            title=f"Status Update: {maintenance_request.ticket_number}",
             message=status_message,
             related_object=maintenance_request,
             data={
-                'url': f'/backend/maintenance/{maintenance_request.id}/',
-                'request_id': maintenance_request.id,
-                'old_status': maintenance_request.status,
-                'new_status': new_status,
-            }
+                "url": f"/backend/maintenance/{maintenance_request.id}/",
+                "request_id": maintenance_request.id,
+                "old_status": maintenance_request.status,
+                "new_status": new_status,
+            },
         )
 
         return JsonResponse(
-            {"status": "success", "message": "Status updated successfully"}
+            {"status": "success", "message": "Status updated successfully"},
         )
 
     except Resident.DoesNotExist:
@@ -717,7 +725,7 @@ def add_maintenance_update(request, request_id):
     content = request.POST.get("content")
     if not content:
         return JsonResponse(
-            {"status": "error", "message": "Update content is required"}
+            {"status": "error", "message": "Update content is required"},
         )
 
     try:
@@ -734,44 +742,44 @@ def add_maintenance_update(request, request_id):
 
         # Send notification based on who added the update
         from .notification_service import NotificationService
-        
+
         if can_manage_maintenance(request.user):
             # Staff member added update, notify the resident who created the request
             NotificationService.create_notification(
                 recipient=maintenance_request.resident,
-                notification_type_name='maintenance_update',
-                title=f'Update on your maintenance request {maintenance_request.ticket_number}',
-                message=f'New update: {content[:100]}{"..." if len(content) > 100 else ""}',
+                notification_type_name="maintenance_update",
+                title=f"Update on your maintenance request {maintenance_request.ticket_number}",
+                message=f"New update: {content[:100]}{'...' if len(content) > 100 else ''}",
                 related_object=maintenance_request,
                 data={
-                    'url': f'/backend/maintenance/{maintenance_request.id}/',
-                    'request_id': maintenance_request.id,
-                    'update_id': update.id,
-                }
+                    "url": f"/backend/maintenance/{maintenance_request.id}/",
+                    "request_id": maintenance_request.id,
+                    "update_id": update.id,
+                },
             )
         elif maintenance_request.resident == request.user:
             # Resident added update to their own request, notify staff members who can manage maintenance
             from .models import Staff
-            
+
             # Notify all active staff members who can handle maintenance
             staff_members = Staff.objects.filter(
                 is_active=True,
-                can_access_all_maintenance=True
-            ).select_related('user')
-            
+                can_access_all_maintenance=True,
+            ).select_related("user")
+
             for staff in staff_members:
                 if staff.user.is_active:
                     NotificationService.create_notification(
                         recipient=staff.user,
-                        notification_type_name='maintenance_resident_update',
-                        title=f'Resident update on {maintenance_request.ticket_number}',
-                        message=f'{maintenance_request.resident.get_full_name()}: {content[:100]}{"..." if len(content) > 100 else ""}',
+                        notification_type_name="maintenance_resident_update",
+                        title=f"Resident update on {maintenance_request.ticket_number}",
+                        message=f"{maintenance_request.resident.get_full_name()}: {content[:100]}{'...' if len(content) > 100 else ''}",
                         related_object=maintenance_request,
                         data={
-                            'url': f'/backend/maintenance/{maintenance_request.id}/',
-                            'request_id': maintenance_request.id,
-                            'update_id': update.id,
-                        }
+                            "url": f"/backend/maintenance/{maintenance_request.id}/",
+                            "request_id": maintenance_request.id,
+                            "update_id": update.id,
+                        },
                     )
 
         return JsonResponse(
@@ -784,7 +792,7 @@ def add_maintenance_update(request, request_id):
                     "created_at": update.created_at.isoformat(),
                     "has_attachment": bool(update.attachment),
                 },
-            }
+            },
         )
 
     except (ValueError, IntegrityError) as e:
@@ -802,7 +810,8 @@ def booking_list(request):
     Display bookings with calendar view and filtering options
     """
     bookings = Booking.objects.filter(booking_date__gte=timezone.now().date()).order_by(
-        "booking_date", "start_time"
+        "booking_date",
+        "start_time",
     )
 
     # Filter by common area
@@ -849,7 +858,7 @@ def booking_calendar(request):
     today = timezone.now().date()
     start_of_month = today.replace(day=1)
     end_of_month = (start_of_month + timedelta(days=32)).replace(day=1) - timedelta(
-        days=1
+        days=1,
     )
 
     bookings = Booking.objects.filter(
@@ -935,7 +944,8 @@ def booking_create(request):
             # TODO: Implement notification sending
 
             messages.success(
-                request, f"Booking {booking.booking_number} created successfully!"
+                request,
+                f"Booking {booking.booking_number} created successfully!",
             )
             return redirect("backend:booking_detail", booking_id=booking.id)
 
@@ -1000,7 +1010,7 @@ def update_booking_status(request, booking_id):
         # TODO: Implement notification sending
 
         return JsonResponse(
-            {"status": "success", "message": "Booking status updated successfully"}
+            {"status": "success", "message": "Booking status updated successfully"},
         )
 
     except (ValueError, IntegrityError) as e:
@@ -1018,7 +1028,7 @@ def event_list(request):
     Display upcoming events with RSVP functionality
     """
     events = Event.objects.filter(start_datetime__gte=timezone.now()).order_by(
-        "start_datetime"
+        "start_datetime",
     )
 
     # Filter by event type
@@ -1107,7 +1117,7 @@ def event_create(request):
 
         # Validate required fields
         if not all(
-            [title, description, event_type, start_datetime, end_datetime, location]
+            [title, description, event_type, start_datetime, end_datetime, location],
         ):
             messages.error(request, "Please fill in all required fields.")
             return redirect("backend:event_create")
@@ -1184,7 +1194,7 @@ def event_rsvp(request, event_id):
                 "status": "success",
                 "message": "RSVP updated successfully",
                 "created": created,
-            }
+            },
         )
 
     except (ValueError, IntegrityError) as e:
@@ -1332,7 +1342,7 @@ def marketplace_update_status(request, item_id):
         item.save()
 
         return JsonResponse(
-            {"status": "success", "message": "Item status updated successfully"}
+            {"status": "success", "message": "Item status updated successfully"},
         )
 
     except (ValueError, IntegrityError) as e:
@@ -1348,7 +1358,9 @@ def marketplace_update_status(request, item_id):
 @require_http_methods(["GET"])
 def get_notifications(request):
     """Get user's notifications - supports both HTML and JSON responses"""
-    notifications = Notification.objects.filter(recipient=request.user).order_by('-created_at')
+    notifications = Notification.objects.filter(recipient=request.user).order_by(
+        "-created_at"
+    )
 
     # Filter by status if requested
     status = request.GET.get("status")
@@ -1361,7 +1373,10 @@ def get_notifications(request):
     page_obj = paginator.get_page(page_number)
 
     # Check if JSON response is requested
-    if request.headers.get('Accept') == 'application/json' or request.GET.get('format') == 'json':
+    if (
+        request.headers.get("Accept") == "application/json"
+        or request.GET.get("format") == "json"
+    ):
         notifications_data = [
             {
                 "id": notification.id,
@@ -1380,26 +1395,31 @@ def get_notifications(request):
                 "has_next": page_obj.has_next(),
                 "has_previous": page_obj.has_previous(),
                 "total_count": paginator.count,
-            }
+            },
         )
-    
+
     # For HTML requests (when user actually visits notification center),
     # automatically mark all unread notifications as read
     if not status:  # Only when viewing all notifications, not filtered views
         unread_notifications = Notification.objects.filter(
             recipient=request.user,
-            status__in=['sent', 'delivered']  # Both 'sent' and 'delivered' are considered unread
+            status__in=[
+                "sent",
+                "delivered",
+            ],  # Both 'sent' and 'delivered' are considered unread
         )
         unread_notifications.update(
-            status='read',
-            read_at=timezone.now()
+            status="read",
+            read_at=timezone.now(),
         )
-        
+
         # Refresh the queryset to show updated status
-        notifications = Notification.objects.filter(recipient=request.user).order_by('-created_at')
+        notifications = Notification.objects.filter(recipient=request.user).order_by(
+            "-created_at"
+        )
         paginator = Paginator(notifications, 20)
         page_obj = paginator.get_page(page_number)
-    
+
     # HTML response for browser navigation
     context = {
         "notifications": page_obj,
@@ -1422,7 +1442,8 @@ def mark_notification_read(request, notification_id):
         return JsonResponse({"status": "success"})
     except Notification.DoesNotExist:
         return JsonResponse(
-            {"status": "error", "message": "Notification not found"}, status=404
+            {"status": "error", "message": "Notification not found"},
+            status=404,
         )
 
 
@@ -1438,23 +1459,26 @@ def mark_all_notifications_read(request):
         # Mark all unread notifications (sent/delivered) as read
         unread_notifications = Notification.objects.filter(
             recipient=request.user,
-            status__in=['sent', 'delivered']
+            status__in=["sent", "delivered"],
         )
-        
+
         updated_count = unread_notifications.update(
-            status='read',
-            read_at=timezone.now()
+            status="read",
+            read_at=timezone.now(),
         )
-        
-        return JsonResponse({
-            "status": "success",
-            "marked_count": updated_count,
-            "message": f"{updated_count} notifications marked as read"
-        })
-        
+
+        return JsonResponse(
+            {
+                "status": "success",
+                "marked_count": updated_count,
+                "message": f"{updated_count} notifications marked as read",
+            }
+        )
+
     except Exception as e:
         return JsonResponse(
-            {"status": "error", "message": str(e)}, status=500
+            {"status": "error", "message": str(e)},
+            status=500,
         )
 
 

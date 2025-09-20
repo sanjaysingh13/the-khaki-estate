@@ -16,7 +16,9 @@ urlpatterns = [
     # ============================================================================
     path("announcements/", views.announcement_list, name="announcement_list"),
     path(
-        "announcements/create/", views.announcement_create, name="announcement_create"
+        "announcements/create/",
+        views.announcement_create,
+        name="announcement_create",
     ),
     path(
         "announcements/<int:announcement_id>/",

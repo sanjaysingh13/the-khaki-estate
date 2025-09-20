@@ -1,26 +1,46 @@
-{% extends "base.html" %} {% load static %} {% block title %}Dashboard - Housing Complex Management{% endblock title %} {% block css %} {{ block.super }}
-<style>
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block title %}
+  Dashboard - Housing Complex Management
+{% endblock title %}
+{% block css %}
+  {{ block.super }}
+  <style>
     .notification-dropdown {
-        width: 300px;
+      width: 300px;
     }
-</style>
-{% endblock css %} {% block content %}
-<div class="container-fluid">
+  </style>
+{% endblock css %}
+{% block content %}
+  <div class="container-fluid">
     <!-- Page Header with User Info and Notifications -->
     <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="h3 mb-0">Welcome back, {{ user.get_full_name|default:user.username }}!</h1>
-                    <p class="text-muted mb-0">
-                        {% if user.user_type == 'resident' and user.resident %} Flat {{ user.resident.flat_number }} {% if user.resident.block %}- Block {{ user.resident.block }}{% endif %} {% elif user.user_type == 'staff' and user.staff %} {{ user.staff.get_staff_role_display
-                        }} {% if user.staff.department %}- {{ user.staff.department }}{% endif %} {% else %} {{ user.get_user_type_display }} {% endif %}
-                    </p>
-                </div>
-                <div class="d-flex align-items-center">
-                    <!-- Notification Bell with Badge -->
-                    <div class="position-relative me-3">
-                        <button class="btn btn-outline-primary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h1 class="h3 mb-0">Welcome back, {{ user.get_full_name|default:user.username }}!</h1>
+            <p class="text-muted mb-0">
+              {% if user.user_type == 'resident' and user.resident %}
+                Flat {{ user.resident.flat_number }}
+                {% if user.resident.block %}- Block {{ user.resident.block }}{% endif %}
+              {% elif user.user_type == 'staff' and user.staff %}
+                {{ user.staff.get_staff_role_display
+                }}
+                {% if user.staff.department %}- {{ user.staff.department }}{% endif %}
+              {% else %}
+                {{ user.get_user_type_display }}
+              {% endif %}
+            </p>
+          </div>
+          <div class="d-flex align-items-center">
+            <!-- Notification Bell with Badge -->
+            <div class="position-relative me-3">
+              <button class="btn btn-outline-primary"
+                      type="button"
+                      data-bs-toggle="dropdown"
+                      aria-expanded="false">
                 <i class="fas fa-bell"></i>
                 {% if unread_notifications > 0 %}
                   <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
@@ -28,317 +48,330 @@
                   </span>
                 {% endif %}
               </button>
-                        <ul class="dropdown-menu dropdown-menu-end notification-dropdown">
-                            <li>
-                                <h6 class="dropdown-header">Recent Notifications</h6>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="{% url 'backend:get_notifications' %}">View All Notifications</a>
-                            </li>
-                        </ul>
-                    </div>
-                    <!-- Quick Actions Dropdown -->
-                    <div class="dropdown">
-                        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Quick Actions</button>
-                        <ul class="dropdown-menu">
-                            <li>
-                                <a class="dropdown-item" href="{% url 'backend:maintenance_create' %}">
-                                    <i class="fas fa-wrench me-2"></i>Report Maintenance Issue
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="{% url 'backend:booking_create' %}">
-                                    <i class="fas fa-calendar-plus me-2"></i>Book Facility
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="{% url 'backend:marketplace_create' %}">
-                                    <i class="fas fa-store me-2"></i>Post Marketplace Item
-                                </a>
-                            </li>
-                            {% if is_committee or is_staff %}
-                            <li>
-                                <hr class="dropdown-divider" />
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="{% url 'backend:announcement_create' %}">
-                                    <i class="fas fa-bullhorn me-2"></i>Create Announcement
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="{% url 'backend:event_create' %}">
-                                    <i class="fas fa-calendar-alt me-2"></i>Create Event
-                                </a>
-                            </li>
-                            {% endif %}
-                        </ul>
-                    </div>
-                </div>
+              <ul class="dropdown-menu dropdown-menu-end notification-dropdown">
+                <li>
+                  <h6 class="dropdown-header">Recent Notifications</h6>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'backend:get_notifications' %}">View All Notifications</a>
+                </li>
+              </ul>
             </div>
+            <!-- Quick Actions Dropdown -->
+            <div class="dropdown">
+              <button class="btn btn-primary dropdown-toggle"
+                      type="button"
+                      data-bs-toggle="dropdown"
+                      aria-expanded="false">Quick Actions</button>
+              <ul class="dropdown-menu">
+                <li>
+                  <a class="dropdown-item" href="{% url 'backend:maintenance_create' %}">
+                    <i class="fas fa-wrench me-2"></i>Report Maintenance Issue
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'backend:booking_create' %}">
+                    <i class="fas fa-calendar-plus me-2"></i>Book Facility
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'backend:marketplace_create' %}">
+                    <i class="fas fa-store me-2"></i>Post Marketplace Item
+                  </a>
+                </li>
+                {% if is_committee or is_staff %}
+                  <li>
+                    <hr class="dropdown-divider" />
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{% url 'backend:announcement_create' %}">
+                      <i class="fas fa-bullhorn me-2"></i>Create Announcement
+                    </a>
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{% url 'backend:event_create' %}">
+                      <i class="fas fa-calendar-alt me-2"></i>Create Event
+                    </a>
+                  </li>
+                {% endif %}
+              </ul>
+            </div>
+          </div>
         </div>
+      </div>
     </div>
     <!-- Main Dashboard Content -->
     <div class="row">
-        <!-- Left Column - Recent Announcements -->
-        <div class="col-lg-8">
-            <!-- Recent Announcements Card -->
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-bullhorn text-primary me-2"></i> Recent Announcements
-                    </h5>
-                    <a href="{% url 'backend:announcement_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
-                </div>
-                <div class="card-body">
-                    {% if recent_announcements %}
-                    <div class="list-group list-group-flush">
-                        {% for announcement in recent_announcements %}
-                        <div class="list-group-item border-0 px-0">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div class="flex-grow-1">
-                                    <div class="d-flex align-items-center mb-1">
-                                        <h6 class="mb-0 me-2">
-                                            <a href="{% url 'backend:announcement_detail' announcement.id %}" class="text-decoration-none">{{ announcement.title }}</a>
-                                        </h6>
-                                        {% if announcement.is_urgent %}<span class="badge bg-danger">Urgent</span>{% endif %} {% if announcement.is_pinned %}<span class="badge bg-warning">Pinned</span>{% endif %}
-                                    </div>
-                                    <p class="text-muted small mb-1">{{ announcement.content|truncatewords:20 }}</p>
-                                    <small class="text-muted">
+      <!-- Left Column - Recent Announcements -->
+      <div class="col-lg-8">
+        <!-- Recent Announcements Card -->
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-bullhorn text-primary me-2"></i> Recent Announcements
+            </h5>
+            <a href="{% url 'backend:announcement_list' %}"
+               class="btn btn-sm btn-outline-primary">View All</a>
+          </div>
+          <div class="card-body">
+            {% if recent_announcements %}
+              <div class="list-group list-group-flush">
+                {% for announcement in recent_announcements %}
+                  <div class="list-group-item border-0 px-0">
+                    <div class="d-flex justify-content-between align-items-start">
+                      <div class="flex-grow-1">
+                        <div class="d-flex align-items-center mb-1">
+                          <h6 class="mb-0 me-2">
+                            <a href="{% url 'backend:announcement_detail' announcement.id %}"
+                               class="text-decoration-none">{{ announcement.title }}</a>
+                          </h6>
+                          {% if announcement.is_urgent %}<span class="badge bg-danger">Urgent</span>{% endif %}
+                          {% if announcement.is_pinned %}<span class="badge bg-warning">Pinned</span>{% endif %}
+                        </div>
+                        <p class="text-muted small mb-1">{{ announcement.content|truncatewords:20 }}</p>
+                        <small class="text-muted">
                           <i class="fas fa-user me-1"></i>{{ announcement.author.get_full_name }}
                           <i class="fas fa-clock ms-2 me-1"></i>{{ announcement.created_at|timesince }} ago
                           <span class="badge bg-secondary ms-2">{{ announcement.category.name }}</span>
                         </small>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
+                      </div>
                     </div>
-                    {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-bullhorn text-muted fa-3x mb-3"></i>
-                        <p class="text-muted">No recent announcements</p>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-            <!-- Upcoming Events Card -->
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-calendar-alt text-success me-2"></i> Upcoming Events
-                    </h5>
-                    <a href="{% url 'backend:event_list' %}" class="btn btn-sm btn-outline-success">View All</a>
-                </div>
-                <div class="card-body">
-                    {% if upcoming_events %}
-                    <div class="list-group list-group-flush">
-                        {% for event in upcoming_events %}
-                        <div class="list-group-item border-0 px-0">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1">
-                                        <a href="{% url 'backend:event_detail' event.id %}" class="text-decoration-none">{{ event.title }}</a>
-                                    </h6>
-                                    <p class="text-muted small mb-1">{{ event.description|truncatewords:15 }}</p>
-                                    <small class="text-muted">
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="text-center py-4">
+                <i class="fas fa-bullhorn text-muted fa-3x mb-3"></i>
+                <p class="text-muted">No recent announcements</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+        <!-- Upcoming Events Card -->
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+              <i class="fas fa-calendar-alt text-success me-2"></i> Upcoming Events
+            </h5>
+            <a href="{% url 'backend:event_list' %}"
+               class="btn btn-sm btn-outline-success">View All</a>
+          </div>
+          <div class="card-body">
+            {% if upcoming_events %}
+              <div class="list-group list-group-flush">
+                {% for event in upcoming_events %}
+                  <div class="list-group-item border-0 px-0">
+                    <div class="d-flex justify-content-between align-items-start">
+                      <div class="flex-grow-1">
+                        <h6 class="mb-1">
+                          <a href="{% url 'backend:event_detail' event.id %}"
+                             class="text-decoration-none">{{ event.title }}</a>
+                        </h6>
+                        <p class="text-muted small mb-1">{{ event.description|truncatewords:15 }}</p>
+                        <small class="text-muted">
                           <i class="fas fa-calendar me-1"></i>{{ event.start_datetime|date:"M d, Y" }}
                           <i class="fas fa-clock ms-2 me-1"></i>{{ event.start_datetime|time:"g:i A" }}
                           <i class="fas fa-map-marker-alt ms-2 me-1"></i>{{ event.location }}
                         </small>
-                                </div>
-                                <div class="text-end">
-                                    <span class="badge bg-primary">{{ event.get_event_type_display }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
+                      </div>
+                      <div class="text-end">
+                        <span class="badge bg-primary">{{ event.get_event_type_display }}</span>
+                      </div>
                     </div>
-                    {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-calendar-alt text-muted fa-3x mb-3"></i>
-                        <p class="text-muted">No upcoming events</p>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="text-center py-4">
+                <i class="fas fa-calendar-alt text-muted fa-3x mb-3"></i>
+                <p class="text-muted">No upcoming events</p>
+              </div>
+            {% endif %}
+          </div>
         </div>
-        <!-- Right Column - Quick Stats and Actions -->
-        <div class="col-lg-4">
-            {% if is_committee or is_staff %}
-            <!-- Committee Member Dashboard -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-tachometer-alt text-info me-2"></i> Management Overview
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-6 mb-3">
-                            <div class="border rounded p-3">
-                                <h3 class="text-danger mb-1">{{ pending_maintenance }}</h3>
-                                <small class="text-muted">Pending Maintenance</small>
-                            </div>
-                        </div>
-                        <div class="col-6 mb-3">
-                            <div class="border rounded p-3">
-                                <h3 class="text-warning mb-1">{{ recent_bookings|length }}</h3>
-                                <small class="text-muted">Upcoming Bookings</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="d-grid gap-2">
-                        <a href="{% url 'backend:maintenance_list' %}" class="btn btn-outline-danger">
-                            <i class="fas fa-wrench me-2"></i>Manage Maintenance
-                        </a>
-                        <a href="{% url 'backend:booking_list' %}" class="btn btn-outline-warning">
-                            <i class="fas fa-calendar-check me-2"></i>Manage Bookings
-                        </a>
-                    </div>
-                </div>
+      </div>
+      <!-- Right Column - Quick Stats and Actions -->
+      <div class="col-lg-4">
+        {% if is_committee or is_staff %}
+          <!-- Committee Member Dashboard -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5 class="card-title mb-0">
+                <i class="fas fa-tachometer-alt text-info me-2"></i> Management Overview
+              </h5>
             </div>
-            <!-- Recent Bookings Card -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-calendar-check text-warning me-2"></i> Recent Bookings
-                    </h5>
+            <div class="card-body">
+              <div class="row text-center">
+                <div class="col-6 mb-3">
+                  <div class="border rounded p-3">
+                    <h3 class="text-danger mb-1">{{ pending_maintenance }}</h3>
+                    <small class="text-muted">Pending Maintenance</small>
+                  </div>
                 </div>
-                <div class="card-body">
-                    {% if recent_bookings %}
-                    <div class="list-group list-group-flush">
-                        {% for booking in recent_bookings %}
-                        <div class="list-group-item border-0 px-0">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <h6 class="mb-1">{{ booking.common_area.name }}</h6>
-                                    <small class="text-muted">{{ booking.booking_date|date:"M d" }} at {{ booking.start_time|time:"g:i A" }}</small>
-                                </div>
-                                <span class="badge bg-{% if booking.status == 'confirmed' %}success{% elif booking.status == 'pending' %}warning{% else %}secondary{% endif %}">
+                <div class="col-6 mb-3">
+                  <div class="border rounded p-3">
+                    <h3 class="text-warning mb-1">{{ recent_bookings|length }}</h3>
+                    <small class="text-muted">Upcoming Bookings</small>
+                  </div>
+                </div>
+              </div>
+              <div class="d-grid gap-2">
+                <a href="{% url 'backend:maintenance_list' %}"
+                   class="btn btn-outline-danger">
+                  <i class="fas fa-wrench me-2"></i>Manage Maintenance
+                </a>
+                <a href="{% url 'backend:booking_list' %}"
+                   class="btn btn-outline-warning">
+                  <i class="fas fa-calendar-check me-2"></i>Manage Bookings
+                </a>
+              </div>
+            </div>
+          </div>
+          <!-- Recent Bookings Card -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5 class="card-title mb-0">
+                <i class="fas fa-calendar-check text-warning me-2"></i> Recent Bookings
+              </h5>
+            </div>
+            <div class="card-body">
+              {% if recent_bookings %}
+                <div class="list-group list-group-flush">
+                  {% for booking in recent_bookings %}
+                    <div class="list-group-item border-0 px-0">
+                      <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                          <h6 class="mb-1">{{ booking.common_area.name }}</h6>
+                          <small class="text-muted">{{ booking.booking_date|date:"M d" }} at {{ booking.start_time|time:"g:i A" }}</small>
+                        </div>
+                        <span class="badge bg-{% if booking.status == 'confirmed' %}success{% elif booking.status == 'pending' %}warning{% else %}secondary{% endif %}">
                           {{ booking.get_status_display }}
                         </span>
-                            </div>
-                        </div>
-                        {% endfor %}
+                      </div>
                     </div>
-                    {% else %}
-                    <p class="text-muted text-center">No recent bookings</p>
-                    {% endif %}
+                  {% endfor %}
                 </div>
+              {% else %}
+                <p class="text-muted text-center">No recent bookings</p>
+              {% endif %}
             </div>
-            {% else %}
-            <!-- Regular Resident Dashboard -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-user text-primary me-2"></i> My Activities
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-6 mb-3">
-                            <div class="border rounded p-3">
-                                <h3 class="text-info mb-1">{{ user_maintenance_requests|length }}</h3>
-                                <small class="text-muted">My Requests</small>
-                            </div>
-                        </div>
-                        <div class="col-6 mb-3">
-                            <div class="border rounded p-3">
-                                <h3 class="text-success mb-1">{{ user_bookings|length }}</h3>
-                                <small class="text-muted">My Bookings</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="d-grid gap-2">
-                        <a href="{% url 'backend:maintenance_list' %}" class="btn btn-outline-info">
-                            <i class="fas fa-wrench me-2"></i>My Maintenance Requests
-                        </a>
-                        <a href="{% url 'backend:booking_list' %}" class="btn btn-outline-success">
-                            <i class="fas fa-calendar-check me-2"></i>My Bookings
-                        </a>
-                    </div>
-                </div>
+          </div>
+        {% else %}
+          <!-- Regular Resident Dashboard -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5 class="card-title mb-0">
+                <i class="fas fa-user text-primary me-2"></i> My Activities
+              </h5>
             </div>
-            <!-- My Maintenance Requests Card -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-wrench text-info me-2"></i> My Maintenance Requests
-                    </h5>
+            <div class="card-body">
+              <div class="row text-center">
+                <div class="col-6 mb-3">
+                  <div class="border rounded p-3">
+                    <h3 class="text-info mb-1">{{ user_maintenance_requests|length }}</h3>
+                    <small class="text-muted">My Requests</small>
+                  </div>
                 </div>
-                <div class="card-body">
-                    {% if user_maintenance_requests %}
-                    <div class="list-group list-group-flush">
-                        {% for request in user_maintenance_requests %}
-                        <div class="list-group-item border-0 px-0">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <h6 class="mb-1">
-                                        <a href="{% url 'backend:maintenance_detail' request.id %}" class="text-decoration-none">{{ request.ticket_number }}</a>
-                                    </h6>
-                                    <small class="text-muted">{{ request.title|truncatewords:8 }}</small>
-                                </div>
-                                <span class="badge bg-{% if request.status == 'resolved' %}success{% elif request.status == 'in_progress' %}warning{% elif request.status == 'submitted' %}info{% else %}secondary{% endif %}">
+                <div class="col-6 mb-3">
+                  <div class="border rounded p-3">
+                    <h3 class="text-success mb-1">{{ user_bookings|length }}</h3>
+                    <small class="text-muted">My Bookings</small>
+                  </div>
+                </div>
+              </div>
+              <div class="d-grid gap-2">
+                <a href="{% url 'backend:maintenance_list' %}"
+                   class="btn btn-outline-info">
+                  <i class="fas fa-wrench me-2"></i>My Maintenance Requests
+                </a>
+                <a href="{% url 'backend:booking_list' %}"
+                   class="btn btn-outline-success">
+                  <i class="fas fa-calendar-check me-2"></i>My Bookings
+                </a>
+              </div>
+            </div>
+          </div>
+          <!-- My Maintenance Requests Card -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5 class="card-title mb-0">
+                <i class="fas fa-wrench text-info me-2"></i> My Maintenance Requests
+              </h5>
+            </div>
+            <div class="card-body">
+              {% if user_maintenance_requests %}
+                <div class="list-group list-group-flush">
+                  {% for request in user_maintenance_requests %}
+                    <div class="list-group-item border-0 px-0">
+                      <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                          <h6 class="mb-1">
+                            <a href="{% url 'backend:maintenance_detail' request.id %}"
+                               class="text-decoration-none">{{ request.ticket_number }}</a>
+                          </h6>
+                          <small class="text-muted">{{ request.title|truncatewords:8 }}</small>
+                        </div>
+                        <span class="badge bg-{% if request.status == 'resolved' %}success{% elif request.status == 'in_progress' %}warning{% elif request.status == 'submitted' %}info{% else %}secondary{% endif %}">
                           {{ request.get_status_display }}
                         </span>
-                            </div>
-                        </div>
-                        {% endfor %}
+                      </div>
                     </div>
-                    {% else %}
-                    <p class="text-muted text-center">No maintenance requests</p>
-                    {% endif %}
+                  {% endfor %}
                 </div>
+              {% else %}
+                <p class="text-muted text-center">No maintenance requests</p>
+              {% endif %}
             </div>
-            <!-- My Bookings Card -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-calendar-check text-success me-2"></i> My Bookings
-                    </h5>
-                </div>
-                <div class="card-body">
-                    {% if user_bookings %}
-                    <div class="list-group list-group-flush">
-                        {% for booking in user_bookings %}
-                        <div class="list-group-item border-0 px-0">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <h6 class="mb-1">{{ booking.common_area.name }}</h6>
-                                    <small class="text-muted">{{ booking.booking_date|date:"M d" }} at {{ booking.start_time|time:"g:i A" }}</small>
-                                </div>
-                                <span class="badge bg-{% if booking.status == 'confirmed' %}success{% elif booking.status == 'pending' %}warning{% else %}secondary{% endif %}">
+          </div>
+          <!-- My Bookings Card -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5 class="card-title mb-0">
+                <i class="fas fa-calendar-check text-success me-2"></i> My Bookings
+              </h5>
+            </div>
+            <div class="card-body">
+              {% if user_bookings %}
+                <div class="list-group list-group-flush">
+                  {% for booking in user_bookings %}
+                    <div class="list-group-item border-0 px-0">
+                      <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                          <h6 class="mb-1">{{ booking.common_area.name }}</h6>
+                          <small class="text-muted">{{ booking.booking_date|date:"M d" }} at {{ booking.start_time|time:"g:i A" }}</small>
+                        </div>
+                        <span class="badge bg-{% if booking.status == 'confirmed' %}success{% elif booking.status == 'pending' %}warning{% else %}secondary{% endif %}">
                           {{ booking.get_status_display }}
                         </span>
-                            </div>
-                        </div>
-                        {% endfor %}
+                      </div>
                     </div>
-                    {% else %}
-                    <p class="text-muted text-center">No bookings</p>
-                    {% endif %}
+                  {% endfor %}
                 </div>
+              {% else %}
+                <p class="text-muted text-center">No bookings</p>
+              {% endif %}
             </div>
-            {% endif %}
-        </div>
+          </div>
+        {% endif %}
+      </div>
     </div>
-</div>
-<!-- JavaScript for Interactive Features -->
-<script>
+  </div>
+  <!-- JavaScript for Interactive Features -->
+  <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Auto-refresh notifications every 30 seconds
-        setInterval(function() {
-            fetch('{% url "backend:get_notifications" %}?status=sent')
-                .then(response => response.json())
-                .then(data => {
-                    // Update notification badge if needed
-                    const badge = document.querySelector('.badge.bg-danger');
-                    if (badge) {
-                        badge.textContent = data.total_count;
-                    }
-                })
-                .catch(error => console.log('Error fetching notifications:', error));
-        }, 30000);
+      // Auto-refresh notifications every 30 seconds
+      setInterval(function() {
+        fetch('{% url "backend:get_notifications" %}?status=sent')
+          .then(response => response.json())
+          .then(data => {
+            // Update notification badge if needed
+            const badge = document.querySelector('.badge.bg-danger');
+            if (badge) {
+              badge.textContent = data.total_count;
+            }
+          })
+          .catch(error => console.log('Error fetching notifications:', error));
+      }, 30000);
     });
-</script>
+  </script>
 {% endblock content %}

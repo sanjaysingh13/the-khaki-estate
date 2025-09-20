@@ -44,7 +44,8 @@ def maintenance_request_updated(sender, instance, created, **kwargs):
 
         # Get committee members (residents)
         committee_members = Resident.objects.filter(
-            is_committee_member=True, user__is_active=True
+            is_committee_member=True,
+            user__is_active=True,
         )
 
         # Get staff members who can handle maintenance

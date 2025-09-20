@@ -37,12 +37,15 @@ def send_notification_task(notification_id, delivery_method):
                 # Create detailed email content for maintenance requests
                 email_message = notification.message
                 related_object = notification.get_related_object()
-                
-                if related_object and hasattr(related_object, 'ticket_number'):
+
+                if related_object and hasattr(related_object, "ticket_number"):
                     # This is a maintenance request - create detailed email content
                     maintenance_request = related_object
-                    resident_name = maintenance_request.resident.name or f"{maintenance_request.resident.first_name} {maintenance_request.resident.last_name}"
-                    
+                    resident_name = (
+                        maintenance_request.resident.name
+                        or f"{maintenance_request.resident.first_name} {maintenance_request.resident.last_name}"
+                    )
+
                     email_message = f"""
 New Maintenance Request Details:
 ================================
@@ -55,10 +58,10 @@ Category: {maintenance_request.category.name}
 Priority: {maintenance_request.get_priority_display()}
 Location: {maintenance_request.location}
 Status: {maintenance_request.get_status_display()}
-Created: {maintenance_request.created_at.strftime('%B %d, %Y at %I:%M %p')}
+Created: {maintenance_request.created_at.strftime("%B %d, %Y at %I:%M %p")}
 
 You can view and manage this request by logging into the system:
-{notification.data.get('url', '/backend/maintenance/')}
+{notification.data.get("url", "/backend/maintenance/")}
 
 ---
 The Khaki Estate Management System

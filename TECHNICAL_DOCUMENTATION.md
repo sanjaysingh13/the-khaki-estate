@@ -115,7 +115,7 @@ MAINTENANCE_NOTIFICATION_TYPES = [
 
 # Notification Flow
 Staff Update → Resident Notification (Email + In-App)
-Resident Update → Staff Notification (Email + In-App)  
+Resident Update → Staff Notification (Email + In-App)
 Status Change → Resident Notification (Email + In-App)
 Committee Members → Dashboard Visibility Only (No Notifications)
 ```
@@ -170,7 +170,7 @@ class User(AbstractUser):
     def get_full_name(self):
         """
         Return the user's full name with fallback logic.
-        
+
         Priority:
         1. first_name + last_name (Django standard)
         2. name field (fallback)
@@ -180,11 +180,11 @@ class User(AbstractUser):
         full_name = f"{self.first_name} {self.last_name}".strip()
         if full_name:
             return full_name
-        
+
         # Fall back to the name field if first_name/last_name are empty
         if self.name:
             return self.name
-        
+
         # Final fallback to username
         return self.username
 

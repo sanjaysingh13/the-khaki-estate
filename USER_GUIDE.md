@@ -496,8 +496,8 @@ Announcements keep you informed about important community updates.
 
 ---
 
-**Last Updated**: December 2024  
-**Version**: 2.0  
+**Last Updated**: December 2024
+**Version**: 2.0
 **System Version**: The Khaki Estate Management System v2.0
 
 ### Recent Updates (v2.0)

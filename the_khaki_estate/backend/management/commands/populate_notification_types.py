@@ -139,7 +139,7 @@ class Command(BaseCommand):
                     NotificationType.objects.all().delete()
                     self.stdout.write(
                         self.style.WARNING(
-                            f"Cleared {deleted_count} existing notification types"
+                            f"Cleared {deleted_count} existing notification types",
                         ),
                     )
 

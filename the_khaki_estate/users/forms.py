@@ -133,7 +133,7 @@ class UserSignupForm(SignupForm):
             attrs={
                 "class": "form-control",
                 "id": "id_user_type",
-            }
+            },
         ),
         help_text="Are you a resident or staff member?",
     )
@@ -152,7 +152,7 @@ class UserSignupForm(SignupForm):
             attrs={
                 "class": "form-control resident-field",
                 "id": "id_resident_type",
-            }
+            },
         ),
         help_text="Your relationship to the property",
     )
@@ -215,7 +215,7 @@ class UserSignupForm(SignupForm):
         user_type = self.cleaned_data.get("user_type")
         if not user_type:
             raise forms.ValidationError(
-                "Please select whether you are a resident or staff member."
+                "Please select whether you are a resident or staff member.",
             )
         return user_type
 
@@ -328,14 +328,17 @@ class UserSignupForm(SignupForm):
                     resident.block = self.cleaned_data.get("block", "")
                     resident.phone_number = self.cleaned_data["phone_number"]
                     resident.alternate_phone = self.cleaned_data.get(
-                        "alternate_phone", ""
+                        "alternate_phone",
+                        "",
                     )
                     resident.resident_type = self.cleaned_data["resident_type"]
                     resident.emergency_contact_name = self.cleaned_data.get(
-                        "emergency_contact_name", ""
+                        "emergency_contact_name",
+                        "",
                     )
                     resident.emergency_contact_phone = self.cleaned_data.get(
-                        "emergency_contact_phone", ""
+                        "emergency_contact_phone",
+                        "",
                     )
                     resident.move_in_date = self.cleaned_data.get("move_in_date")
                     resident.email_notifications = True
@@ -353,10 +356,12 @@ class UserSignupForm(SignupForm):
                         alternate_phone=self.cleaned_data.get("alternate_phone", ""),
                         resident_type=self.cleaned_data["resident_type"],
                         emergency_contact_name=self.cleaned_data.get(
-                            "emergency_contact_name", ""
+                            "emergency_contact_name",
+                            "",
                         ),
                         emergency_contact_phone=self.cleaned_data.get(
-                            "emergency_contact_phone", ""
+                            "emergency_contact_phone",
+                            "",
                         ),
                         move_in_date=self.cleaned_data.get("move_in_date"),
                         # Default notification preferences
@@ -376,10 +381,12 @@ class UserSignupForm(SignupForm):
                     staff.phone_number = self.cleaned_data["phone_number"]
                     staff.alternate_phone = self.cleaned_data.get("alternate_phone", "")
                     staff.emergency_contact_name = self.cleaned_data.get(
-                        "emergency_contact_name", ""
+                        "emergency_contact_name",
+                        "",
                     )
                     staff.emergency_contact_phone = self.cleaned_data.get(
-                        "emergency_contact_phone", ""
+                        "emergency_contact_phone",
+                        "",
                     )
                     staff.save()
                 except Staff.DoesNotExist:
@@ -391,10 +398,12 @@ class UserSignupForm(SignupForm):
                         phone_number=self.cleaned_data["phone_number"],
                         alternate_phone=self.cleaned_data.get("alternate_phone", ""),
                         emergency_contact_name=self.cleaned_data.get(
-                            "emergency_contact_name", ""
+                            "emergency_contact_name",
+                            "",
                         ),
                         emergency_contact_phone=self.cleaned_data.get(
-                            "emergency_contact_phone", ""
+                            "emergency_contact_phone",
+                            "",
                         ),
                         employment_status="full_time",
                         hire_date=timezone.now().date(),

@@ -902,21 +902,21 @@ class Notification(models.Model):
             try:
                 # Try different app configurations
                 app_labels = ["backend", "the_khaki_estate.backend"]
-                
+
                 for app_label in app_labels:
                     try:
                         model = apps.get_model(app_label, self.related_object_type)
                         return model.objects.get(id=self.related_object_id)
                     except (LookupError, ValueError):
                         continue
-                
+
                 # If no app label worked, try getting the model directly from current module
                 model_name = self.related_object_type.lower()
-                if model_name == 'maintenancerequest':
+                if model_name == "maintenancerequest":
                     return MaintenanceRequest.objects.get(id=self.related_object_id)
-                elif model_name == 'announcement':
+                if model_name == "announcement":
                     return Announcement.objects.get(id=self.related_object_id)
-                    
+
             except Exception as e:
                 print(f"Error getting related object: {e}")
                 return None

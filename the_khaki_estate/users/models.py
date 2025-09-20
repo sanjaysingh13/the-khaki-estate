@@ -33,11 +33,11 @@ class User(AbstractUser):
     def get_full_name(self):
         """
         Return the user's full name.
-        
+
         This method prioritizes the combined first_name and last_name fields,
         but falls back to the name field if those are empty, and finally
         to the username if no name is available.
-        
+
         Returns:
             str: The user's full name or username as fallback
         """
@@ -45,11 +45,11 @@ class User(AbstractUser):
         full_name = f"{self.first_name} {self.last_name}".strip()
         if full_name:
             return full_name
-        
+
         # Fall back to the name field if first_name/last_name are empty
         if self.name:
             return self.name
-        
+
         # Final fallback to username
         return self.username
 

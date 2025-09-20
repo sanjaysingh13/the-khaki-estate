@@ -208,7 +208,7 @@ class Command(BaseCommand):
                     MaintenanceCategory.objects.all().delete()
                     self.stdout.write(
                         self.style.WARNING(
-                            f"Cleared {deleted_count} existing categories"
+                            f"Cleared {deleted_count} existing categories",
                         ),
                     )
 
@@ -277,7 +277,7 @@ class Command(BaseCommand):
                 self.stdout.write("\n📊 Categories by Priority Level:")
                 for priority in range(1, 5):
                     count = MaintenanceCategory.objects.filter(
-                        priority_level=priority
+                        priority_level=priority,
                     ).count()
                     priority_names = {
                         1: "Low (Routine)",
@@ -286,7 +286,7 @@ class Command(BaseCommand):
                         4: "Emergency (Immediate)",
                     }
                     self.stdout.write(
-                        f"  Priority {priority} - {priority_names[priority]}: {count} categories"
+                        f"  Priority {priority} - {priority_names[priority]}: {count} categories",
                     )
 
         except Exception as e:
