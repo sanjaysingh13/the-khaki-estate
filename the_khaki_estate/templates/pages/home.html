@@ -1,1 +1,190 @@
-{% extends "base.html" %}
+{% extends "base.html" %} {% load static %} {% block title %}Welcome to The Khaki Estate{% endblock title %} {% block content %} {% endblock content %} {% block main %}
+<!-- Hero Section with Banner Image -->
+<!-- This section creates a full-width hero area with the banner image as background -->
+<!-- Using margin calculations to break out of the container and achieve true full-width -->
+<div class="position-relative overflow-hidden bg-light text-center" style="min-height: 70vh; margin-left: calc(-50vw + 50%); margin-right: calc(-50vw + 50%); width: 100vw;">
+
+    <!-- Background Image Container -->
+    <!-- The banner image is set as a background with overlay for better text readability -->
+    <!-- Using object-fit cover ensures the image scales properly across all screen sizes -->
+    <div class="position-absolute top-0 start-0 w-100 h-100 hero-background">
+    </div>
+
+    <!-- Content Overlay -->
+    <!-- This div contains the main text content and is positioned over the background image -->
+    <!-- Using Bootstrap's positioning classes and z-index to ensure content appears above background -->
+    <div class="position-relative d-flex align-items-center justify-content-center h-100" style="z-index: 2;">
+        <div class="col-md-8 col-lg-6">
+
+            <!-- Main Title with Animation Effect -->
+            <!-- Bootstrap typography classes combined with custom styling for visual appeal -->
+            <!-- The title uses large font sizes and text shadow for better visibility over the image -->
+            <h1 class="display-1 fw-bold text-white mb-4 animate__animated animate__fadeInUp" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.8); font-size: 4rem; letter-spacing: 2px;">
+                The Khaki Estate
+            </h1>
+
+            <!-- Subtitle/Tagline -->
+            <!-- Provides additional context about the estate with elegant styling -->
+            <!-- Using Bootstrap's lead class for emphasized paragraph text -->
+            <p class="lead text-white mb-4 animate__animated animate__fadeInUp animate__delay-1s" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.8); font-size: 1.5rem;">
+                Your Premium Residential Community
+            </p>
+
+            <!-- Call-to-Action Buttons -->
+            <!-- Bootstrap button components styled for maximum visual impact -->
+            <!-- Using different button variants to create hierarchy and guide user actions -->
+            <div class="d-flex gap-3 justify-content-center flex-wrap animate__animated animate__fadeInUp animate__delay-2s">
+                {% if not request.user.is_authenticated %}
+                <!-- Login/Register buttons for non-authenticated users -->
+                <a href="{% url 'account_login' %}" class="btn btn-primary btn-lg px-4 py-2 shadow-lg" style="border-radius: 25px; font-weight: 600;">
+                    <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                </a>
+                {% if ACCOUNT_ALLOW_REGISTRATION %}
+                <a href="{% url 'account_signup' %}" class="btn btn-outline-light btn-lg px-4 py-2 shadow-lg" style="border-radius: 25px; font-weight: 600; border-width: 2px;">
+                    <i class="fas fa-user-plus me-2"></i>Join Our Community
+                </a>
+                {% endif %} {% else %}
+                <!-- Dashboard button for authenticated users -->
+                <a href="{% url 'backend:dashboard' %}" class="btn btn-primary btn-lg px-4 py-2 shadow-lg" style="border-radius: 25px; font-weight: 600;">
+                    <i class="fas fa-tachometer-alt me-2"></i>Go to Dashboard
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Scroll Down Indicator -->
+    <!-- Animated indicator to encourage users to scroll and see more content -->
+    <!-- Using Font Awesome icons and CSS animations for smooth visual feedback -->
+    <div class="position-absolute bottom-0 start-50 translate-middle-x mb-4 animate__animated animate__bounce animate__infinite">
+        <i class="fas fa-chevron-down text-white" style="font-size: 2rem; opacity: 0.8;"></i>
+    </div>
+</div>
+
+<!-- Welcome Information Section -->
+<!-- This section provides additional information about the estate -->
+<!-- Using Bootstrap's grid system and card components for organized content presentation -->
+<div class="container my-5">
+    <div class="row">
+        <div class="col-12 text-center mb-5">
+            <!-- Section Header -->
+            <!-- Clear, prominent heading to introduce the information section -->
+            <h2 class="display-4 fw-bold text-dark mb-3">Welcome Home</h2>
+            <p class="lead text-muted">Experience luxury living in our premium residential community</p>
+        </div>
+    </div>
+
+    <!-- Feature Cards Grid -->
+    <!-- Bootstrap card components arranged in a responsive grid layout -->
+    <!-- Each card highlights a key feature or benefit of the estate -->
+    <div class="row g-4">
+
+        <!-- Community Features Card -->
+        <!-- Highlights the community aspects and social features -->
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0" style="transition: transform 0.3s ease;">
+                <div class="card-body text-center p-4">
+                    <!-- Icon using Font Awesome for visual appeal -->
+                    <div class="mb-3">
+                        <i class="fas fa-users text-primary" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title fw-bold">Vibrant Community</h5>
+                    <p class="card-text text-muted">
+                        Connect with neighbors, participate in events, and enjoy a thriving community atmosphere.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modern Amenities Card -->
+        <!-- Showcases the facilities and amenities available -->
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0" style="transition: transform 0.3s ease;">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-swimming-pool text-success" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title fw-bold">Premium Amenities</h5>
+                    <p class="card-text text-muted">
+                        Enjoy world-class facilities including pools, fitness centers, and recreational areas.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Smart Management Card -->
+        <!-- Emphasizes the digital/tech aspects of the estate management -->
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0" style="transition: transform 0.3s ease;">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-mobile-alt text-info" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title fw-bold">Smart Management</h5>
+                    <p class="card-text text-muted">
+                        Manage bookings, maintenance requests, and community interactions through our digital platform.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Additional Styling for Enhanced Visual Effects -->
+<style>
+    /* CSS Animations and Hover Effects */
+    /* These styles enhance the user experience with smooth transitions and interactive feedback */
+    /* Hero background image with overlay */
+    
+    .hero-background {
+        background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)),
+        url('{% static "images/khaki_banner.PNG" %}') center/cover no-repeat;
+    }
+    /* Card hover effects for better interactivity */
+    
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+    }
+    /* Smooth scrolling behavior for better navigation */
+    
+    html {
+        scroll-behavior: smooth;
+    }
+    /* Animation keyframes for custom effects */
+    
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    /* Apply animation to elements */
+    
+    .animate__fadeInUp {
+        animation: fadeInUp 1s ease-out;
+    }
+    
+    .animate__delay-1s {
+        animation-delay: 0.5s;
+    }
+    
+    .animate__delay-2s {
+        animation-delay: 1s;
+    }
+    /* Responsive adjustments for different screen sizes */
+    
+    @media (max-width: 768px) {
+        .display-1 {
+            font-size: 2.5rem !important;
+        }
+        .lead {
+            font-size: 1.2rem !important;
+        }
+    }
+</style>
+{% endblock main %}
