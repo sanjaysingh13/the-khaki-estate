@@ -19,8 +19,8 @@ class User(AbstractUser):
 
     # First and last name do not cover name patterns around the globe
     name = CharField(_("Name of User"), blank=True, max_length=255)
-    first_name = None  # type: ignore[assignment]
-    last_name = None  # type: ignore[assignment]
+    # Note: first_name and last_name are inherited from AbstractUser
+    # and are used by the signup forms and get_full_name() method
 
     # User type field to distinguish between residents and maintenance staff
     user_type = CharField(
@@ -29,6 +29,29 @@ class User(AbstractUser):
         default="resident",
         help_text="Type of user - resident or maintenance staff",
     )
+
+    def get_full_name(self):
+        """
+        Return the user's full name.
+        
+        This method prioritizes the combined first_name and last_name fields,
+        but falls back to the name field if those are empty, and finally
+        to the username if no name is available.
+        
+        Returns:
+            str: The user's full name or username as fallback
+        """
+        # Try Django's standard first_name + last_name combination first
+        full_name = f"{self.first_name} {self.last_name}".strip()
+        if full_name:
+            return full_name
+        
+        # Fall back to the name field if first_name/last_name are empty
+        if self.name:
+            return self.name
+        
+        # Final fallback to username
+        return self.username
 
     def get_absolute_url(self) -> str:
         """Get URL for user's detail view.

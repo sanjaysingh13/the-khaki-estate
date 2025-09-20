@@ -1,4 +1,10 @@
-{% extends "base.html" %} {% load static %} {% block title %}Dashboard - Housing Complex Management{% endblock %} {% block content %}
+{% extends "base.html" %} {% load static %} {% block title %}Dashboard - Housing Complex Management{% endblock title %} {% block css %} {{ block.super }}
+<style>
+    .notification-dropdown {
+        width: 300px;
+    }
+</style>
+{% endblock css %} {% block content %}
 <div class="container-fluid">
     <!-- Page Header with User Info and Notifications -->
     <div class="row mb-4">
@@ -22,7 +28,7 @@
                   </span>
                 {% endif %}
               </button>
-                        <ul class="dropdown-menu dropdown-menu-end" style="width: 300px;">
+                        <ul class="dropdown-menu dropdown-menu-end notification-dropdown">
                             <li>
                                 <h6 class="dropdown-header">Recent Notifications</h6>
                             </li>
@@ -335,4 +341,4 @@
         }, 30000);
     });
 </script>
-{% endblock %}
+{% endblock content %}

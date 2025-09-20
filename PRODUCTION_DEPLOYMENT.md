@@ -36,19 +36,19 @@ The system automatically includes **11 notification types** for the notification
 
 ### Notification Categories:
 - **Maintenance**: new_maintenance_request, maintenance_update, urgent_maintenance_request
-- **Announcements**: new_announcement, urgent_announcement  
+- **Announcements**: new_announcement, urgent_announcement
 - **Events**: event_reminder, event_cancelled
 - **Bookings**: booking_confirmed, booking_cancelled
 - **System**: welcome_message, account_activated
 
 - **Emergency (Priority 4)**: 6 categories - Immediate response required
-- **High Priority (Priority 3)**: 7 categories - Major issues affecting daily life  
+- **High Priority (Priority 3)**: 7 categories - Major issues affecting daily life
 - **Medium Priority (Priority 2)**: 9 categories - Standard maintenance and repairs
 - **Low Priority (Priority 1)**: 5 categories - Routine maintenance and cosmetic issues
 
 ### Categories Include:
 - **Electrical** (Emergency & Standard)
-- **Plumbing** (Emergency & Standard) 
+- **Plumbing** (Emergency & Standard)
 - **HVAC** (Air Conditioning, Heating)
 - **Safety** (Fire Safety, Security, Gas Leaks)
 - **Structural** (Damage, Doors/Windows)

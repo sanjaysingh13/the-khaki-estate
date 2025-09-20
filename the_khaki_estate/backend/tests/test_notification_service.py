@@ -285,7 +285,7 @@ class NotificationServiceTest(TestCase):
         ]
 
         with patch(
-            "the_khaki_estate.backend.notification_service.send_notification_task"
+            "the_khaki_estate.backend.notification_service.send_notification_task",
         ) as mock_task:
             notifications = NotificationService.notify_multiple_residents(
                 residents=residents,
@@ -314,16 +314,16 @@ class NotificationServiceTest(TestCase):
         """
         # Create additional residents
         from the_khaki_estate.users.tests.factories import ResidentUserFactory
-        
+
         # Create residents with active/inactive users
         active_user = ResidentUserFactory(is_active=True)
         inactive_user = ResidentUserFactory(is_active=False)
-        
+
         additional_resident1 = ResidentFactory(user=active_user)
         additional_resident2 = ResidentFactory(user=inactive_user)  # Inactive user
 
         with patch(
-            "the_khaki_estate.backend.notification_service.send_notification_task"
+            "the_khaki_estate.backend.notification_service.send_notification_task",
         ) as mock_task:
             notifications = NotificationService.notify_all_residents(
                 notification_type_name="new_announcement",
@@ -341,7 +341,8 @@ class NotificationServiceTest(TestCase):
             for notification in notifications:
                 self.assertEqual(notification.title, "Society-wide Notification")
                 self.assertEqual(
-                    notification.message, "This is a society-wide notification"
+                    notification.message,
+                    "This is a society-wide notification",
                 )
                 self.assertTrue(notification.recipient.is_active)
 
@@ -353,7 +354,7 @@ class NotificationServiceTest(TestCase):
         residents_to_exclude = [self.resident_email_only, self.resident_sms_only]
 
         with patch(
-            "the_khaki_estate.backend.notification_service.send_notification_task"
+            "the_khaki_estate.backend.notification_service.send_notification_task",
         ) as mock_task:
             notifications = NotificationService.notify_all_residents(
                 notification_type_name="new_announcement",
@@ -373,7 +374,7 @@ class NotificationServiceTest(TestCase):
         Should notify all residents when exclusion list is empty.
         """
         with patch(
-            "the_khaki_estate.backend.notification_service.send_notification_task"
+            "the_khaki_estate.backend.notification_service.send_notification_task",
         ) as mock_task:
             notifications = NotificationService.notify_all_residents(
                 notification_type_name="new_announcement",
@@ -391,7 +392,7 @@ class NotificationServiceTest(TestCase):
         Should notify all residents when exclusion is None.
         """
         with patch(
-            "the_khaki_estate.backend.notification_service.send_notification_task"
+            "the_khaki_estate.backend.notification_service.send_notification_task",
         ) as mock_task:
             notifications = NotificationService.notify_all_residents(
                 notification_type_name="new_announcement",
@@ -465,7 +466,8 @@ class NotificationServiceTest(TestCase):
         self.assertEqual(notification.data, complex_data)
         self.assertEqual(notification.data["metadata"]["source"], "admin")
         self.assertEqual(
-            notification.data["metadata"]["tags"], ["urgent", "maintenance"]
+            notification.data["metadata"]["tags"],
+            ["urgent", "maintenance"],
         )
 
     @patch("the_khaki_estate.backend.notification_service.send_notification_task")
@@ -526,7 +528,7 @@ class NotificationServiceTest(TestCase):
         start_time = time.time()
 
         with patch(
-            "the_khaki_estate.backend.notification_service.send_notification_task"
+            "the_khaki_estate.backend.notification_service.send_notification_task",
         ):
             notifications = NotificationService.notify_multiple_residents(
                 residents=residents,
@@ -581,7 +583,7 @@ class NotificationServiceTest(TestCase):
         ]
 
         with patch(
-            "the_khaki_estate.backend.notification_service.send_notification_task"
+            "the_khaki_estate.backend.notification_service.send_notification_task",
         ):
             # Simulate concurrent operations
             notifications1 = NotificationService.notify_multiple_residents(

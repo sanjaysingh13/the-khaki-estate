@@ -1,6 +1,5 @@
 from celery import shared_task
 from django.core.mail import send_mail
-from django.template.loader import render_to_string
 from django.utils import timezone
 
 from .models import Notification
@@ -18,9 +17,9 @@ def send_notification_task(notification_id, delivery_method):
         # Get user's phone number from profile
         phone_number = None
         try:
-            if hasattr(recipient, 'resident'):
+            if hasattr(recipient, "resident"):
                 phone_number = recipient.resident.phone_number
-            elif hasattr(recipient, 'staff'):
+            elif hasattr(recipient, "staff"):
                 phone_number = recipient.staff.phone_number
         except:
             pass
@@ -35,10 +34,39 @@ def send_notification_task(notification_id, delivery_method):
                     "data": notification.data,
                 }
 
-                # For now, send simple text email since we don't have templates
+                # Create detailed email content for maintenance requests
+                email_message = notification.message
+                related_object = notification.get_related_object()
+                
+                if related_object and hasattr(related_object, 'ticket_number'):
+                    # This is a maintenance request - create detailed email content
+                    maintenance_request = related_object
+                    resident_name = maintenance_request.resident.name or f"{maintenance_request.resident.first_name} {maintenance_request.resident.last_name}"
+                    
+                    email_message = f"""
+New Maintenance Request Details:
+================================
+
+Ticket Number: {maintenance_request.ticket_number}
+Resident: {resident_name} ({maintenance_request.resident.username})
+Title: {maintenance_request.title}
+Description: {maintenance_request.description}
+Category: {maintenance_request.category.name}
+Priority: {maintenance_request.get_priority_display()}
+Location: {maintenance_request.location}
+Status: {maintenance_request.get_status_display()}
+Created: {maintenance_request.created_at.strftime('%B %d, %Y at %I:%M %p')}
+
+You can view and manage this request by logging into the system:
+{notification.data.get('url', '/backend/maintenance/')}
+
+---
+The Khaki Estate Management System
+                    """.strip()
+
                 send_mail(
                     subject=notification.title,
-                    message=notification.message,
+                    message=email_message,
                     from_email="noreply@thekhakie state.com",
                     recipient_list=[recipient.email],
                     fail_silently=False,

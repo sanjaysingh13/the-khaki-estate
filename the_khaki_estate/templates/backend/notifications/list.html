@@ -1,0 +1,103 @@
+{% extends "base.html" %} {% load static %} {% block title %}Notifications{% endblock title %} {% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-bell"></i> Notifications {% if total_count > 0 %}
+                        <span class="badge bg-primary ms-2">{{ total_count }}</span> {% endif %}
+                    </h4>
+
+                    <!-- Status Filter -->
+                    <div class="btn-group" role="group">
+                        <a href="{% url 'backend:get_notifications' %}" class="btn btn-sm {% if not status_filter %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                            All
+                        </a>
+                        <a href="{% url 'backend:get_notifications' %}?status=sent" class="btn btn-sm {% if status_filter == 'sent' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+                            New
+                        </a>
+                        <a href="{% url 'backend:get_notifications' %}?status=read" class="btn btn-sm {% if status_filter == 'read' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+                            Read
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    {% if notifications %}
+                    <div class="list-group">
+                        {% for notification in notifications %}
+                        <div class="list-group-item {% if notification.status == 'sent' or notification.status == 'delivered' %}border-warning bg-light{% endif %}">
+                            <div class="d-flex w-100 justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">
+                                        {{ notification.title }} {% if notification.status == 'sent' or notification.status == 'delivered' %}
+                                        <span class="badge bg-warning text-dark ms-2">New</span> {% endif %}
+                                    </h6>
+                                    <p class="mb-1">{{ notification.message }}</p>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock"></i> 
+                                        {{ notification.created_at|date:"M d, Y g:i A" }}
+                                    </small>
+                                </div>
+
+                                <div class="ms-3">
+                                    {% if notification.data.url %}
+                                    <a href="{{ notification.data.url }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-external-link-alt"></i> View
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if notifications.has_other_pages %}
+                    <nav aria-label="Notification pagination" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if notifications.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ notifications.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </a>
+                            </li>
+                            {% endif %}
+
+                            <li class="page-item active">
+                                <span class="page-link">
+                                            Page {{ notifications.number }} of {{ notifications.paginator.num_pages }}
+                                        </span>
+                            </li>
+
+                            {% if notifications.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ notifications.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                                                Next <i class="fas fa-chevron-right"></i>
+                                            </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %} {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No notifications found</h5>
+                        <p class="text-muted">
+                            {% if status_filter %} {% if status_filter == 'sent' %} No new notifications at this time. {% else %} No {{ status_filter }} notifications at this time. {% endif %} {% else %} You don't have any notifications yet. {% endif %}
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 
+No inline JavaScript needed anymore - notifications are automatically 
+marked as read when the user visits this page (handled in the view)
+-->
+
+{% endblock content %}

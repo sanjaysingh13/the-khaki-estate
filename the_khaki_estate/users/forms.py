@@ -129,10 +129,12 @@ class UserSignupForm(SignupForm):
     user_type = forms.ChoiceField(
         choices=USER_TYPE_CHOICES,
         required=True,
-        widget=forms.Select(attrs={
-            "class": "form-control",
-            "id": "id_user_type",
-        }),
+        widget=forms.Select(
+            attrs={
+                "class": "form-control",
+                "id": "id_user_type",
+            }
+        ),
         help_text="Are you a resident or staff member?",
     )
 
@@ -146,10 +148,12 @@ class UserSignupForm(SignupForm):
     resident_type = forms.ChoiceField(
         choices=RESIDENT_TYPES,
         required=False,  # Will be required conditionally via JavaScript validation
-        widget=forms.Select(attrs={
-            "class": "form-control resident-field",
-            "id": "id_resident_type",
-        }),
+        widget=forms.Select(
+            attrs={
+                "class": "form-control resident-field",
+                "id": "id_resident_type",
+            }
+        ),
         help_text="Your relationship to the property",
     )
 
@@ -210,29 +214,31 @@ class UserSignupForm(SignupForm):
         """Validate that user_type is selected"""
         user_type = self.cleaned_data.get("user_type")
         if not user_type:
-            raise forms.ValidationError("Please select whether you are a resident or staff member.")
+            raise forms.ValidationError(
+                "Please select whether you are a resident or staff member."
+            )
         return user_type
 
     def clean_resident_type(self):
         """Validate resident_type is provided when user_type is resident"""
         user_type = self.cleaned_data.get("user_type")
         resident_type = self.cleaned_data.get("resident_type")
-        
+
         if user_type == "resident" and not resident_type:
             raise forms.ValidationError("Please select your resident type.")
-        
+
         return resident_type
 
     def clean_flat_number(self):
         """Validate flat number format and uniqueness for residents only"""
         user_type = self.cleaned_data.get("user_type")
         flat_number = self.cleaned_data.get("flat_number")
-        
+
         # Only validate flat number for residents
         if user_type == "resident":
             if not flat_number:
                 raise forms.ValidationError("Flat number is required for residents.")
-            
+
             # Import here to avoid circular imports
             from the_khaki_estate.backend.models import Resident
 
@@ -280,18 +286,21 @@ class UserSignupForm(SignupForm):
         """Create User and appropriate profile (Resident or Staff)"""
         from django.db import transaction
         from django.utils import timezone
-        from the_khaki_estate.backend.models import Resident, Staff
+
+        from the_khaki_estate.backend.models import Resident
+        from the_khaki_estate.backend.models import Staff
 
         # Use atomic transaction to ensure both User and profile are created together
         # This prevents the signal from interfering with our profile creation
         with transaction.atomic():
             # Temporarily disable the signal to prevent interference
             from django.db.models.signals import post_save
+
             from the_khaki_estate.users.signals import create_resident_profile
-            
+
             # Disconnect the signal temporarily
             post_save.disconnect(create_resident_profile, sender=User)
-            
+
             try:
                 # Save the user first
                 user = super().save(request)
@@ -300,9 +309,11 @@ class UserSignupForm(SignupForm):
                 user.name = f"{self.cleaned_data.get('first_name', '')} {self.cleaned_data.get('last_name', '')}".strip()
                 user.first_name = self.cleaned_data.get("first_name", "")
                 user.last_name = self.cleaned_data.get("last_name", "")
-                user.user_type = self.cleaned_data["user_type"]  # Set user type from form
+                user.user_type = self.cleaned_data[
+                    "user_type"
+                ]  # Set user type from form
                 user.save()
-                
+
             finally:
                 # Reconnect the signal
                 post_save.connect(create_resident_profile, sender=User)
@@ -316,10 +327,16 @@ class UserSignupForm(SignupForm):
                     resident.flat_number = self.cleaned_data["flat_number"]
                     resident.block = self.cleaned_data.get("block", "")
                     resident.phone_number = self.cleaned_data["phone_number"]
-                    resident.alternate_phone = self.cleaned_data.get("alternate_phone", "")
+                    resident.alternate_phone = self.cleaned_data.get(
+                        "alternate_phone", ""
+                    )
                     resident.resident_type = self.cleaned_data["resident_type"]
-                    resident.emergency_contact_name = self.cleaned_data.get("emergency_contact_name", "")
-                    resident.emergency_contact_phone = self.cleaned_data.get("emergency_contact_phone", "")
+                    resident.emergency_contact_name = self.cleaned_data.get(
+                        "emergency_contact_name", ""
+                    )
+                    resident.emergency_contact_phone = self.cleaned_data.get(
+                        "emergency_contact_phone", ""
+                    )
                     resident.move_in_date = self.cleaned_data.get("move_in_date")
                     resident.email_notifications = True
                     resident.sms_notifications = False
@@ -335,8 +352,12 @@ class UserSignupForm(SignupForm):
                         phone_number=self.cleaned_data["phone_number"],
                         alternate_phone=self.cleaned_data.get("alternate_phone", ""),
                         resident_type=self.cleaned_data["resident_type"],
-                        emergency_contact_name=self.cleaned_data.get("emergency_contact_name", ""),
-                        emergency_contact_phone=self.cleaned_data.get("emergency_contact_phone", ""),
+                        emergency_contact_name=self.cleaned_data.get(
+                            "emergency_contact_name", ""
+                        ),
+                        emergency_contact_phone=self.cleaned_data.get(
+                            "emergency_contact_phone", ""
+                        ),
                         move_in_date=self.cleaned_data.get("move_in_date"),
                         # Default notification preferences
                         email_notifications=True,
@@ -344,7 +365,7 @@ class UserSignupForm(SignupForm):
                         urgent_only=False,
                         is_committee_member=False,  # Default to False, admin can change later
                     )
-            
+
             elif user.user_type == "staff":
                 # For staff users, we'll create a basic staff profile
                 # Note: This form is primarily for residents. Staff should use StaffSignupForm
@@ -354,8 +375,12 @@ class UserSignupForm(SignupForm):
                     # Update basic information if staff profile already exists
                     staff.phone_number = self.cleaned_data["phone_number"]
                     staff.alternate_phone = self.cleaned_data.get("alternate_phone", "")
-                    staff.emergency_contact_name = self.cleaned_data.get("emergency_contact_name", "")
-                    staff.emergency_contact_phone = self.cleaned_data.get("emergency_contact_phone", "")
+                    staff.emergency_contact_name = self.cleaned_data.get(
+                        "emergency_contact_name", ""
+                    )
+                    staff.emergency_contact_phone = self.cleaned_data.get(
+                        "emergency_contact_phone", ""
+                    )
                     staff.save()
                 except Staff.DoesNotExist:
                     # Create basic staff profile - they'll need to complete it later
@@ -365,8 +390,12 @@ class UserSignupForm(SignupForm):
                         staff_role="cleaner",  # Default role - needs to be updated
                         phone_number=self.cleaned_data["phone_number"],
                         alternate_phone=self.cleaned_data.get("alternate_phone", ""),
-                        emergency_contact_name=self.cleaned_data.get("emergency_contact_name", ""),
-                        emergency_contact_phone=self.cleaned_data.get("emergency_contact_phone", ""),
+                        emergency_contact_name=self.cleaned_data.get(
+                            "emergency_contact_name", ""
+                        ),
+                        emergency_contact_phone=self.cleaned_data.get(
+                            "emergency_contact_phone", ""
+                        ),
                         employment_status="full_time",
                         hire_date=timezone.now().date(),
                         # Default permissions (minimal)

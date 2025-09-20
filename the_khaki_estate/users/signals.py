@@ -20,39 +20,40 @@ def create_resident_profile(sender, instance, created, **kwargs):
     This acts as a backup for cases where the extended signup form
     doesn't create the Resident profile (e.g., admin-created users,
     social auth users, or legacy users).
-    
+
     NOTE: This signal is disabled for staff users to prevent conflicts.
     """
     # STRICT CONDITIONS: Only create for newly created users with resident type
     if not created:
         return  # Skip for user updates
-        
+
     if instance.user_type != "resident":
         return  # Skip for non-resident users
-        
+
     # Import here to avoid circular imports
-    from the_khaki_estate.backend.models import Resident, Staff
-    
+    from the_khaki_estate.backend.models import Resident
+    from the_khaki_estate.backend.models import Staff
+
     # SAFETY CHECKS: Multiple conditions to prevent unwanted creation
     try:
         # Check 1: Does user already have a resident profile?
-        if hasattr(instance, 'resident') and instance.resident:
+        if hasattr(instance, "resident") and instance.resident:
             return  # Already has resident profile
     except Resident.DoesNotExist:
         pass  # No resident profile, continue
-    
+
     try:
         # Check 2: Does user have a staff profile? (Should never happen for residents)
-        if hasattr(instance, 'staff') and instance.staff:
+        if hasattr(instance, "staff") and instance.staff:
             return  # Has staff profile, don't create resident profile
     except Staff.DoesNotExist:
         pass  # No staff profile, continue
-    
+
     # Check 3: Is this being called from a signup form context?
     # If user has proper email/name, assume signup form will handle profile creation
     if instance.email and (instance.first_name or instance.last_name or instance.name):
         return  # Signup form will handle this
-    
+
     # Only create for admin-created users or edge cases
     try:
         Resident.objects.create(
@@ -69,9 +70,10 @@ def create_resident_profile(sender, instance, created, **kwargs):
     except Exception as e:
         # Log the error but don't break user creation
         import logging
+
         logger = logging.getLogger(__name__)
         logger.error(
-            f"Failed to create Resident profile for user {instance.username}: {e}"
+            f"Failed to create Resident profile for user {instance.username}: {e}",
         )
 
 

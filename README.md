@@ -168,11 +168,13 @@ Instead of relying on informal communication channels where messages get lost an
 
 ## 🚀 Getting Started
 
+**IMPORTANT: This project uses `uv` as the Python package manager for all dependency management and virtual environment operations.**
+
 ### **Prerequisites**
 - Python 3.11+
 - PostgreSQL 13+
 - Redis 6+
-- Node.js 16+ (for frontend assets)
+- uv (modern Python package manager)
 
 ### **Installation**
 
@@ -184,7 +186,7 @@ Instead of relying on informal communication channels where messages get lost an
 
 2. **Install dependencies**
    ```bash
-   uv run pip install -r requirements.txt
+   uv sync
    ```
 
 3. **Setup database**
@@ -199,7 +201,7 @@ Instead of relying on informal communication channels where messages get lost an
 
 5. **Start development server**
    ```bash
-   uv run python manage.py runserver
+   uv run python manage.py runserver 8001
    ```
 
 6. **Start Celery worker** (in separate terminal)
@@ -259,6 +261,25 @@ Instead of relying on informal communication channels where messages get lost an
 - **Voice Notifications** - Alexa/Google Home integration
 - **IoT Integration** - Smart building sensors
 - **Advanced Reporting** - Business intelligence dashboard
+
+## 📚 Documentation
+
+This project maintains comprehensive documentation in two main files:
+
+### **Technical Documentation**
+- **[TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md)**: Complete technical reference for developers, system architects, and technical teams
+- **Covers**: Architecture, models, workflows, API design, deployment, testing, and development tools
+- **Includes**: Latest tech stack information, code examples, and implementation patterns
+
+### **User Guide**
+- **[USER_GUIDE.md](USER_GUIDE.md)**: Comprehensive guide for all users (residents, committee members, maintenance staff)
+- **Covers**: Getting started, user roles, features, workflows, troubleshooting, and best practices
+- **Includes**: Step-by-step instructions, screenshots, and role-specific guidance
+
+### **Documentation Servers**
+- **MkDocs**: http://localhost:8000 (primary documentation)
+- **Django Application**: http://localhost:8001 (main application)
+- **Sphinx Documentation**: http://localhost:8080 (static) / http://localhost:9000 (live reload)
 
 ## 🤝 Contributing
 

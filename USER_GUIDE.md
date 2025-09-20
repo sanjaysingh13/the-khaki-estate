@@ -1,11 +1,4 @@
-# The Khaki Estate - Housing Complex Management System
-## User Guide for Residents, Committee Members & Maintenance Staff
-
-
-
-Welcome to The Khaki Estate's digital community hub! This comprehensive guide will help you navigate and use all the features of our housing complex management system, whether you're a resident, committee member, or maintenance staff.
-
----
+# The Khaki Estate - User Guide
 
 ## 📋 Table of Contents
 
@@ -44,8 +37,6 @@ Welcome to The Khaki Estate's digital community hub! This comprehensive guide wi
 
 ## 👥 User Types & Roles
 
-The Khaki Estate system supports different user types with specific roles and permissions:
-
 ### 🏠 Residents
 **Types**: Owner, Tenant, Family Member
 
@@ -66,7 +57,6 @@ The Khaki Estate system supports different user types with specific roles and pe
 - Access resident management features
 
 ### 🔧 Maintenance Staff
-**Professional staff with specialized roles**:
 
 #### **Facility Manager**
 - **Full System Access**: View and manage all maintenance requests
@@ -220,32 +210,6 @@ Announcements keep you informed about important community updates.
 5. **Quality Control**: Review completed work before closing requests
 6. **Cost Management**: Approve estimated costs and track actual expenses
 
-#### **Staff Coordination**
-- **Team Overview**: View all maintenance staff, their roles, and current assignments
-- **Assignment History**: Track which staff members handle different types of requests
-- **Performance Tracking**: Monitor individual staff performance and completion rates
-- **Schedule Management**: Coordinate staff schedules and availability
-
-#### **Communication Tools**
-- **Resident Updates**: Send progress updates directly to requesting residents
-- **Staff Notifications**: Notify staff of new assignments and priority changes
-- **Announcement Creation**: Send maintenance-related announcements to all residents
-- **Management Reports**: Generate reports for property management
-
-### For Maintenance Supervisors
-
-#### **Team Management**
-- **Supervise Technical Staff**: Oversee electricians, plumbers, and general maintenance workers
-- **Assignment Distribution**: Distribute requests among team members based on expertise
-- **Quality Assurance**: Ensure work meets quality standards before completion
-- **Training Coordination**: Identify training needs and coordinate skill development
-
-#### **Request Handling**
-- **Technical Assessment**: Evaluate technical requirements of maintenance requests
-- **Resource Planning**: Determine materials and tools needed for each request
-- **Timeline Management**: Set realistic completion timeframes for assigned work
-- **Progress Reviews**: Conduct regular progress reviews with team members
-
 ### For Technical Staff (Electricians, Plumbers, etc.)
 
 #### **Personal Dashboard**
@@ -264,35 +228,6 @@ Announcements keep you informed about important community updates.
    - Record any issues or complications
 5. **Complete Request**: Mark as "Resolved" with completion notes and photos
 6. **Cost Recording**: Document actual time spent and materials used
-
-#### **Communication**
-- **Resident Contact**: Communicate directly with residents about their requests
-- **Supervisor Updates**: Provide regular updates to supervisors
-- **Issue Escalation**: Escalate complex issues to supervisors or facility manager
-- **Documentation**: Maintain detailed records of all work performed
-
-### For Support Staff (Security, Cleaning, Gardening)
-
-#### **Role-Specific Features**
-- **Relevant Requests**: View maintenance requests related to your area of responsibility
-- **Announcement Creation**: Send announcements relevant to your role (security alerts, cleaning schedules, etc.)
-- **Basic Maintenance**: Handle simple maintenance tasks when assigned
-- **Reporting**: Report issues and maintenance needs in your areas
-
-### For Accountants
-
-#### **Financial Management**
-- **Cost Tracking**: Monitor maintenance costs across all requests
-- **Budget Analysis**: Track spending against maintenance budgets
-- **Vendor Management**: Manage relationships with external contractors and suppliers
-- **Financial Reporting**: Generate detailed financial reports for management
-- **Billing Coordination**: Coordinate billing for resident-specific maintenance work
-
-#### **Reporting Features**
-- **Monthly Reports**: Generate monthly maintenance cost summaries
-- **Category Analysis**: Analyze spending by maintenance category
-- **Staff Cost Analysis**: Track labor costs and efficiency
-- **Vendor Performance**: Monitor external contractor costs and performance
 
 ---
 
@@ -319,29 +254,6 @@ Announcements keep you informed about important community updates.
 - **Parking**: Special parking arrangements
 - **Conference Room**: Meetings and small events
 
-#### **Booking Management**
-- **View Bookings**: Check "My Bookings" for all your reservations
-- **Calendar View**: See availability in calendar format
-- **Modify Bookings**: Change details (if allowed)
-- **Cancel Bookings**: Cancel with appropriate notice
-- **Status Tracking**: Monitor approval status
-
-### For Committee Members
-
-#### **Approval Process**
-1. **Review Requests**: Check pending bookings
-2. **Verify Availability**: Ensure no conflicts
-3. **Check Compliance**: Verify booking rules are followed
-4. **Approve/Reject**: Make decision with comments
-5. **Notify Resident**: Send confirmation or rejection
-
-#### **Booking Rules**
-- **Advance Booking**: Minimum notice required
-- **Duration Limits**: Maximum booking duration
-- **Guest Limits**: Maximum number of attendees
-- **Fee Structure**: Applicable charges
-- **Cancellation Policy**: Rules for cancellations
-
 ---
 
 ## 🎉 Community Events
@@ -354,13 +266,6 @@ Announcements keep you informed about important community updates.
 3. **RSVP**: Respond Yes/No/Maybe with guest count
 4. **Add Comments**: Share thoughts or ask questions
 5. **Event Updates**: Receive notifications about changes
-
-#### **Event Types**
-- **Social Events**: Parties, celebrations, cultural events
-- **Community Meetings**: Resident meetings, AGMs
-- **Sports Activities**: Tournaments, fitness classes
-- **Educational**: Workshops, seminars, training
-- **Emergency Drills**: Safety and security exercises
 
 ### For Event Organizers
 
@@ -377,13 +282,6 @@ Announcements keep you informed about important community updates.
    - **Target Audience**: Who can attend
    - **Registration**: Open or invitation-only
 4. **Publish**: Make event visible to residents
-
-#### **Event Management**
-- **RSVP Tracking**: Monitor responses and attendance
-- **Capacity Management**: Handle overbookings
-- **Updates**: Send notifications about changes
-- **Cancellation**: Cancel events with proper notice
-- **Post-Event**: Share photos and feedback
 
 ---
 
@@ -409,23 +307,6 @@ Announcements keep you informed about important community updates.
 3. **Contact Details**: Provide preferred contact method
 4. **Publish**: Make listing visible to community
 
-#### **Marketplace Categories**
-- **Furniture**: Chairs, tables, beds, cabinets
-- **Electronics**: TVs, computers, appliances
-- **Vehicles**: Cars, bikes, scooters
-- **Services**: Cleaning, repairs, tutoring
-- **Books & Media**: Books, DVDs, games
-- **Clothing**: Fashion, accessories, shoes
-- **Home & Garden**: Tools, plants, decorations
-
-### For Moderators
-
-#### **Content Management**
-- **Review Listings**: Check for inappropriate content
-- **Remove Items**: Delete expired or problematic listings
-- **User Reports**: Handle complaints about sellers
-- **Category Management**: Organize and maintain categories
-
 ---
 
 ## 🔔 Notifications
@@ -445,12 +326,6 @@ Announcements keep you informed about important community updates.
 - **Filter**: Sort by type or date
 - **Settings**: Configure notification preferences
 
-### Notification Preferences
-- **Email Notifications**: Receive emails for important updates
-- **SMS Notifications**: Get text messages for urgent items
-- **In-App Only**: Only see notifications when logged in
-- **Urgent Only**: Only receive critical notifications
-
 ---
 
 ## 👤 User Profile Management
@@ -467,12 +342,6 @@ Announcements keep you informed about important community updates.
 - **Urgency Settings**: Set notification priority levels
 - **Frequency**: How often to receive updates
 
-### Account Security
-- **Password Changes**: Update your password regularly
-- **Two-Factor Authentication**: Enable for extra security
-- **Login History**: Monitor account access
-- **Privacy Settings**: Control information visibility
-
 ---
 
 ## 👨‍💼 Admin & Management Features
@@ -484,7 +353,6 @@ Announcements keep you informed about important community updates.
 - **Profile Management**: Update resident information, flat assignments, and contact details
 - **Account Status**: Activate, deactivate, or suspend resident accounts
 - **Committee Assignment**: Designate committee members and assign special permissions
-- **Move-in/Move-out**: Handle resident transitions and account transfers
 
 #### **Staff Management**
 - **Staff Registration**: Create accounts for maintenance staff with appropriate roles
@@ -492,13 +360,6 @@ Announcements keep you informed about important community updates.
 - **Permission Management**: Configure what each staff member can access and do
 - **Employment Tracking**: Manage hire dates, employment status, and reporting relationships
 - **Performance Monitoring**: Track staff performance metrics and resident satisfaction ratings
-
-#### **Staff Roles Configuration**
-- **Facility Manager**: Full maintenance access, staff assignment, announcements
-- **Accountant**: Financial management, cost tracking, billing coordination
-- **Maintenance Supervisor**: Team management, quality control, technical oversight
-- **Technical Staff**: Specialized maintenance work, status updates, documentation
-- **Support Staff**: Role-specific access for security, cleaning, gardening
 
 ### System Administration
 
@@ -513,53 +374,6 @@ Announcements keep you informed about important community updates.
 - **Booking Rules**: Set booking limits, advance notice requirements, and fees
 - **Availability Management**: Manage facility schedules and maintenance downtime
 - **Fee Structure**: Configure booking fees and payment requirements
-
-#### **Announcement Management**
-- **Category Setup**: Create announcement categories with color coding and icons
-- **Approval Workflow**: Set up announcement approval processes if required
-- **Distribution Rules**: Configure who can send announcements to whom
-- **Archive Management**: Manage announcement retention and archival
-
-### Reporting & Analytics
-
-#### **Maintenance Reports**
-- **Request Analytics**: Track request volumes, categories, and resolution times
-- **Staff Performance**: Monitor individual and team performance metrics
-- **Cost Analysis**: Analyze maintenance costs by category, staff, and time period
-- **Resident Satisfaction**: Track resident feedback and satisfaction ratings
-- **Trend Analysis**: Identify patterns in maintenance requests and costs
-
-#### **User Activity Reports**
-- **Login Analytics**: Monitor user activity and system usage
-- **Feature Usage**: Track which features are most/least used
-- **Engagement Metrics**: Monitor resident participation in events and community activities
-- **System Performance**: Monitor system response times and performance metrics
-
-#### **Financial Reports**
-- **Budget Tracking**: Monitor maintenance spending against budgets
-- **Cost Center Analysis**: Break down costs by category, staff, and time period
-- **Vendor Analysis**: Track external contractor costs and performance
-- **Billing Reports**: Generate reports for resident-specific charges
-
-### System Configuration
-
-#### **Notification Settings**
-- **Email Templates**: Customize email templates for different notification types
-- **SMS Configuration**: Set up SMS notifications for urgent matters
-- **Delivery Rules**: Configure when and how notifications are sent
-- **Escalation Rules**: Set up automatic escalation for overdue requests
-
-#### **Security Settings**
-- **Access Control**: Configure user permissions and access levels
-- **Password Policies**: Set password requirements and expiration rules
-- **Login Security**: Configure two-factor authentication and login restrictions
-- **Data Backup**: Manage system backups and data retention policies
-
-#### **Integration Settings**
-- **Payment Gateways**: Configure payment processing for booking fees
-- **Email Services**: Set up email delivery services
-- **SMS Services**: Configure SMS notification services
-- **External Systems**: Integrate with property management or accounting systems
 
 ---
 
@@ -596,11 +410,6 @@ Announcements keep you informed about important community updates.
 - **Phone Support**: Call during business hours
 - **Emergency Contact**: Use for urgent technical issues
 
-### Browser Compatibility
-- **Recommended Browsers**: Chrome, Firefox, Safari, Edge
-- **Mobile Access**: Works on smartphones and tablets
-- **Browser Updates**: Keep browser updated for best experience
-
 ---
 
 ## 📱 Mobile Access
@@ -632,42 +441,6 @@ Announcements keep you informed about important community updates.
 - **Logout**: Always logout when finished
 - **Public Computers**: Never save passwords on shared devices
 - **Suspicious Activity**: Report any unusual account activity
-
----
-
-## 📞 Contact Information
-
-### Management Office
-- **Address**: [Management Office Address]
-- **Phone**: [Office Phone Number]
-- **Email**: [Management Email]
-- **Hours**: [Office Hours]
-
-### Technical Support
-- **Email**: [Technical Support Email]
-- **Phone**: [Technical Support Phone]
-- **Hours**: [Support Hours]
-
-### Emergency Contacts
-- **24/7 Emergency**: [Emergency Phone]
-- **Security**: [Security Contact]
-- **Maintenance Emergency**: [Emergency Maintenance]
-
----
-
-## 📚 Additional Resources
-
-### Documentation
-- **System Manual**: Detailed technical documentation
-- **Policy Documents**: Housing complex policies and rules
-- **Forms & Templates**: Downloadable forms and templates
-- **Legal Documents**: Terms of service and privacy policy
-
-### Training Materials
-- **Video Tutorials**: Step-by-step video guides
-- **Webinars**: Live training sessions
-- **User Workshops**: In-person training sessions
-- **Quick Reference Cards**: Printable cheat sheets
 
 ---
 
@@ -705,20 +478,6 @@ Announcements keep you informed about important community updates.
 - **Problem Solving**: Escalate complex issues rather than attempting beyond expertise
 - **Learning**: Stay updated with new techniques and technologies in your field
 
-#### **For Supervisors**
-- **Team Leadership**: Support and guide your team members effectively
-- **Quality Assurance**: Review completed work before final approval
-- **Resource Management**: Plan materials and tools efficiently
-- **Training Focus**: Identify skill gaps and provide training opportunities
-- **Communication Bridge**: Facilitate communication between staff and management
-
-#### **For Accountants**
-- **Accurate Tracking**: Maintain precise records of all maintenance costs
-- **Budget Monitoring**: Alert management of budget overruns early
-- **Vendor Relations**: Build good relationships with suppliers and contractors
-- **Report Clarity**: Provide clear, actionable financial reports
-- **Cost Optimization**: Identify opportunities for cost savings without compromising quality
-
 ---
 
 ## 🔄 System Updates
@@ -737,10 +496,8 @@ Announcements keep you informed about important community updates.
 
 ---
 
-*This user guide is regularly updated to reflect the latest features and improvements. For the most current version, please check the system's help section.*
-
-**Last Updated**: December 2024
-**Version**: 2.0
+**Last Updated**: December 2024  
+**Version**: 2.0  
 **System Version**: The Khaki Estate Management System v2.0
 
 ### Recent Updates (v2.0)
@@ -763,53 +520,3 @@ Announcements keep you informed about important community updates.
 - **Performance Metrics**: Monitor staff performance and resident satisfaction ratings
 - **Advanced Status Tracking**: 7-stage status workflow with automatic timestamping
 - **Resident Feedback**: 5-star rating system with detailed feedback collection
-
-### Management Commands
-- **Demo Functionality**: Run `uv run python manage.py demo_staff_functionality` to see the system in action
-- **Staff Registration**: Use the StaffSignupForm for creating new maintenance staff accounts
-- **Admin Interface**: Enhanced Django admin with role-based permissions and staff management
-
-### Testing & Verification
-- **Unit Tests**: Run `uv run pytest the_khaki_estate/backend/tests/test_staff_functionality_simple.py -v`
-- **Live Demo**: Use the demo command to see complete maintenance workflow
-- **Form Validation**: StaffSignupForm tested and working with all role types
-- **Database Integration**: All migrations applied and models working correctly
-
----
-
-## 🧪 Testing the New Features
-
-### For Developers & Administrators
-
-#### **Running Tests**
-```bash
-# Run staff functionality tests
-uv run pytest the_khaki_estate/backend/tests/test_staff_functionality_simple.py -v
-
-# Run live demonstration
-uv run python manage.py demo_staff_functionality --cleanup
-
-# Test form validation
-uv run python manage.py shell -c "from the_khaki_estate.users.forms import StaffSignupForm; print('Form available:', StaffSignupForm)"
-```
-
-#### **Verification Checklist**
-- ✅ **Staff Creation**: All 8 staff roles can be created with appropriate permissions
-- ✅ **User Types**: Resident and Staff user types work correctly
-- ✅ **Maintenance Workflow**: Complete workflow from submission to closure
-- ✅ **Assignment Logic**: Smart staff assignment based on expertise
-- ✅ **Cost Tracking**: Estimated vs actual cost monitoring
-- ✅ **Feedback System**: Resident rating and feedback collection
-- ✅ **Admin Interface**: Enhanced Django admin with staff management
-
-#### **Demo Results**
-The live demonstration shows:
-- **Ticket Generation**: Automatic ticket numbers (e.g., MNT-2025-0001)
-- **Staff Assignment**: Facility Manager assigns Electrician to electrical issues
-- **Cost Management**: Track estimated (₹200) vs actual (₹180) costs
-- **Performance Tracking**: Resolution time and resident satisfaction (5 stars)
-- **Permission Verification**: Role-based access control working correctly
-
----
-
-*For questions or suggestions about this guide, please contact the management office or your facility manager.*

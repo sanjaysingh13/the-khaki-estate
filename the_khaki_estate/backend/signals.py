@@ -1,9 +1,12 @@
+from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.db import models
 
 # Import models to avoid circular imports in signal functions
-from .models import Announcement, MaintenanceRequest, Resident, Staff
+from .models import Announcement
+from .models import MaintenanceRequest
+from .models import Resident
+from .models import Staff
 from .notification_service import NotificationService
 
 
@@ -36,32 +39,24 @@ def maintenance_request_updated(sender, instance, created, **kwargs):
     if created:
         # Notify management about new request - both committee members and staff
         from django.contrib.auth import get_user_model
+
         User = get_user_model()
-        
+
         # Get committee members (residents)
-        committee_members = Resident.objects.filter(is_committee_member=True, user__is_active=True)
-        
+        committee_members = Resident.objects.filter(
+            is_committee_member=True, user__is_active=True
+        )
+
         # Get staff members who can handle maintenance
         maintenance_staff = Staff.objects.filter(
             is_active=True,
-            user__is_active=True
+            user__is_active=True,
         ).filter(
-            models.Q(can_access_all_maintenance=True) |
-            models.Q(staff_role__in=['facility_manager', 'maintenance_supervisor'])
+            models.Q(can_access_all_maintenance=True)
+            | models.Q(staff_role__in=["facility_manager", "maintenance_supervisor"]),
         )
-        
-        # Notify committee members
-        if committee_members.exists():
-            NotificationService.notify_multiple_residents(
-                residents=committee_members,
-                notification_type_name="new_maintenance_request",
-                title=f"New Maintenance Request: {instance.ticket_number}",
-                message=f"From: {instance.resident.get_full_name()} - {instance.title}",
-                related_object=instance,
-                data={"url": f"/maintenance/{instance.id}/"},
-            )
-        
-        # Notify staff members
+
+        # Notify staff members only (committee members will see in dashboard for awareness)
         for staff in maintenance_staff:
             NotificationService.create_notification(
                 recipient=staff.user,

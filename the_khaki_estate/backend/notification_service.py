@@ -1,5 +1,5 @@
-from django.utils import timezone
-from .models import Notification, NotificationType
+from .models import Notification
+from .models import NotificationType
 from .tasks import send_notification_task
 
 
@@ -30,7 +30,7 @@ class NotificationService:
         """
         try:
             notification_type = NotificationType.objects.get(
-                name=notification_type_name
+                name=notification_type_name,
             )
         except NotificationType.DoesNotExist:
             # Create default notification type
@@ -57,18 +57,18 @@ class NotificationService:
 
         # Get user notification preferences from their profile
         email_notifications = True  # Default
-        sms_notifications = False   # Default
-        urgent_only = False        # Default
-        
+        sms_notifications = False  # Default
+        urgent_only = False  # Default
+
         try:
             # Try to get preferences from Resident profile
-            if hasattr(recipient, 'resident'):
+            if hasattr(recipient, "resident"):
                 profile = recipient.resident
                 email_notifications = profile.email_notifications
                 sms_notifications = profile.sms_notifications
                 urgent_only = profile.urgent_only
             # Try to get preferences from Staff profile
-            elif hasattr(recipient, 'staff'):
+            elif hasattr(recipient, "staff"):
                 profile = recipient.staff
                 email_notifications = profile.email_notifications
                 sms_notifications = profile.sms_notifications
@@ -80,12 +80,14 @@ class NotificationService:
         # Respect user preferences
         if not email_notifications and "email" in delivery_method:
             delivery_method = delivery_method.replace("email", "").replace(
-                "both", "sms"
+                "both",
+                "sms",
             )
 
         if not sms_notifications and "sms" in delivery_method:
             delivery_method = delivery_method.replace("sms", "").replace(
-                "both", "email"
+                "both",
+                "email",
             )
 
         # Only urgent notifications if user chose urgent_only
@@ -111,7 +113,7 @@ class NotificationService:
         notifications = []
         for resident in residents:
             notification = NotificationService.create_notification(
-                resident=resident,
+                recipient=resident.user,
                 notification_type_name=notification_type_name,
                 title=title,
                 message=message,

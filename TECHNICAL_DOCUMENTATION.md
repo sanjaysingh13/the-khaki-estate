@@ -1,8 +1,34 @@
 # The Khaki Estate - Technical Documentation
-## Architecture, Models, Workflows & Implementation Guide
 
-**Version**: 2.0
-**Last Updated**: December 2024
+**IMPORTANT: This project uses `uv` as the Python package manager for all dependency management and virtual environment operations.**
+
+## 🚀 Quick Start
+
+### Package Manager
+- **Primary Tool**: `uv` (modern Python package manager)
+- **Virtual Environment**: Managed by `uv`
+- **Dependencies**: `uv.lock` file for reproducible builds
+
+### Development Commands
+```bash
+# Start development server
+uv run python manage.py runserver 8001
+
+# Run migrations
+uv run python manage.py migrate
+
+# Run tests
+uv run pytest -v
+
+# Install dependencies
+uv sync
+
+# Add new dependency
+uv add package-name
+```
+
+**Version**: 2.1
+**Last Updated**: September 2025
 **Target Audience**: Developers, System Architects, Technical Teams
 
 ---
@@ -31,11 +57,12 @@
 
 ### Technology Stack
 - **Backend Framework**: Django 5.2.6
-- **Database**: PostgreSQL with Neo4j integration [[memory:8337724]]
-- **Task Queue**: Celery with Redis/RabbitMQ
+- **Database**: PostgreSQL with Neo4j integration (database: 'cdranalysis')
+- **Task Queue**: Celery with Redis
 - **Package Manager**: uv (modern Python package management)
 - **Testing**: pytest with factory_boy
 - **Admin Interface**: Enhanced Django Admin
+- **Frontend**: Bootstrap 5, Font Awesome, JavaScript
 
 ### Core Components
 ```
@@ -57,6 +84,61 @@
 │  ├── StaffAdmin (NEW)  │  ├── maintenance_signals.py        │
 │  └── Enhanced Models   │  └── celery_app.py                 │
 └─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🔔 Enhanced Notification & Maintenance Workflow (v2.1)
+
+### **Major UX Improvements**
+
+**Auto-Mark Notifications as Read:**
+- Notifications automatically marked as read when user visits notification center
+- Eliminated manual "Mark Read" buttons for better UX
+- Smart notification badge that clears automatically
+
+**Streamlined Maintenance Workflow:**
+- **Staff-Resident Communication**: Direct workflow between facility managers and residents
+- **Committee Role Simplified**: Committee members have dashboard visibility without operational notifications
+- **Enhanced Permission System**: Proper staff vs resident permission checking
+- **Real-time Notifications**: Staff updates trigger immediate resident notifications
+
+### **Notification Types Enhanced**
+
+```python
+# New notification types added for maintenance workflow
+MAINTENANCE_NOTIFICATION_TYPES = [
+    'maintenance_status_change',     # When staff changes request status
+    'maintenance_resident_update',   # When resident adds update (notifies staff)
+    'maintenance_update',           # When staff adds update (notifies resident)
+]
+
+# Notification Flow
+Staff Update → Resident Notification (Email + In-App)
+Resident Update → Staff Notification (Email + In-App)  
+Status Change → Resident Notification (Email + In-App)
+Committee Members → Dashboard Visibility Only (No Notifications)
+```
+
+### **Permission Architecture Redesigned**
+
+```python
+# Simplified permission model focusing on operational roles
+def can_manage_maintenance(user):
+    """
+    Enhanced permission checking for maintenance operations.
+    Focuses on staff capabilities rather than committee membership.
+    """
+    if user.is_staff_member():
+        staff = user.staff
+        return staff.is_active and (
+            staff.can_access_all_maintenance
+            or staff.can_assign_requests
+            or staff.staff_role in ["facility_manager", "maintenance_supervisor"]
+        )
+    return False
+
+# Committee members retain view access but no operational responsibilities
 ```
 
 ---
@@ -84,6 +166,27 @@ class User(AbstractUser):
         choices=USER_TYPE_CHOICES,
         default="resident"
     )
+
+    def get_full_name(self):
+        """
+        Return the user's full name with fallback logic.
+        
+        Priority:
+        1. first_name + last_name (Django standard)
+        2. name field (fallback)
+        3. username (final fallback)
+        """
+        # Try Django's standard first_name + last_name combination first
+        full_name = f"{self.first_name} {self.last_name}".strip()
+        if full_name:
+            return full_name
+        
+        # Fall back to the name field if first_name/last_name are empty
+        if self.name:
+            return self.name
+        
+        # Final fallback to username
+        return self.username
 
     # Helper methods for type checking
     def is_resident(self) -> bool
@@ -336,7 +439,25 @@ def get_role_matches(category):
 
 ---
 
-## 🔄 Maintenance Request Workflow
+## 🔄 Enhanced Maintenance Request Workflow (v2.1)
+
+### **Redesigned Workflow Architecture**
+
+**Key Design Changes:**
+- **Staff-Focused Operations**: Facility managers handle all maintenance operations
+- **Committee Oversight Only**: Committee members have dashboard visibility without operational burden
+- **Direct Communication**: Staff ↔ Resident communication, no committee notification spam
+- **Auto-Notification System**: Real-time notifications for all workflow changes
+
+**Workflow Participants:**
+```python
+# Primary Actors
+STAFF_ROLES = ['facility_manager', 'maintenance_supervisor', 'electrician', 'plumber']
+RESIDENT_ROLE = 'resident'
+
+# Oversight Only (No Operational Notifications)
+COMMITTEE_ROLE = 'committee_member'  # Dashboard visibility only
+```
 
 ### State Machine Implementation
 
@@ -2324,6 +2445,26 @@ the_khaki_estate/
 
 **This technical documentation is maintained alongside the codebase. For questions or contributions, please refer to the development team or create an issue in the project repository.**
 
-**Last Updated**: December 2024
-**Documentation Version**: 2.0
-**System Version**: The Khaki Estate Management System v2.0
+**Last Updated**: Sepember 19, 2025
+### **Template Architecture Best Practices**
+
+```python
+# CRITICAL: Avoid template variable naming conflicts
+# BAD - overwrites Django's request context
+context = {
+    "request": maintenance_request,  # ❌ Conflicts with HTTP request
+}
+
+# GOOD - uses descriptive names
+context = {
+    "maintenance_request": maintenance_request,  # ✅ Clear and specific
+    "can_manage": can_manage_maintenance(request.user),
+}
+
+# Template usage
+# BAD: {{ request.title }} - breaks authentication context
+# GOOD: {{ maintenance_request.title }} - preserves request.user
+```
+
+**Documentation Version**: 2.1
+**System Version**: The Khaki Estate Management System v2.1

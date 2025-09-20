@@ -35,6 +35,20 @@ def populate_notification_types(apps, schema_editor):
             'both',
             True
         ),
+        (
+            'maintenance_status_change',
+            'emails/maintenance_status_change.html',
+            'Your maintenance request #{ticket_number} status has been updated to {status}.',
+            'both',
+            False
+        ),
+        (
+            'maintenance_resident_update',
+            'emails/maintenance_resident_update.html',
+            'Resident has added an update to maintenance request #{ticket_number}.',
+            'email',
+            False
+        ),
         
         # Announcement-related notifications
         (
@@ -124,6 +138,7 @@ def reverse_populate_notification_types(apps, schema_editor):
     # List of notification type names to remove during reverse migration
     notification_type_names = [
         'new_maintenance_request', 'maintenance_update', 'urgent_maintenance_request',
+        'maintenance_status_change', 'maintenance_resident_update',
         'new_announcement', 'urgent_announcement', 'event_reminder', 'event_cancelled',
         'booking_confirmed', 'booking_cancelled', 'welcome_message', 'account_activated'
     ]
