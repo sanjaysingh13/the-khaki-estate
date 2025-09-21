@@ -64,6 +64,7 @@ urlpatterns = [
     # ============================================================================
     path("bookings/", views.booking_list, name="booking_list"),
     path("bookings/calendar/", views.booking_calendar, name="booking_calendar"),
+    path("bookings/calendar/api/", views.booking_calendar_api, name="booking_calendar_api"),
     path("bookings/create/", views.booking_create, name="booking_create"),
     path("bookings/<int:booking_id>/", views.booking_detail, name="booking_detail"),
     path(

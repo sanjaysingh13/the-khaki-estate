@@ -1,0 +1,10 @@
+# Ignore Django HTML templates
+*.html
+the_khaki_estate/templates/**/*.html
+templates/**/*.html
+
+# Ignore other files
+node_modules/
+.git/
+migrations/
+*.min.js

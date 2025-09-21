@@ -177,13 +177,17 @@ def _notify_booking_approved(booking):
         recipient=booking.resident,
         notification_type_name="booking_approved",
         title=f"Booking Approved: {booking.booking_number}",
-        message=f"Your booking for {booking.common_area.name} on {booking.booking_date} has been approved",
+        message=f"Great news! Your booking for {booking.common_area.name} on {booking.booking_date} from {booking.start_time.strftime('%H:%M')} to {booking.end_time.strftime('%H:%M')} has been approved by {booking.approved_by.get_full_name()}",
         related_object=booking,
         data={
             "url": f"/backend/bookings/{booking.id}/",
             "booking_number": booking.booking_number,
             "area_name": booking.common_area.name,
             "booking_date": booking.booking_date.strftime("%Y-%m-%d"),
+            "start_time": booking.start_time.strftime("%H:%M"),
+            "end_time": booking.end_time.strftime("%H:%M"),
+            "approved_by": booking.approved_by.get_full_name(),
+            "approved_at": booking.approved_at.strftime("%Y-%m-%d %H:%M"),
         },
     )
 
@@ -194,14 +198,18 @@ def _notify_booking_rejected(booking):
         recipient=booking.resident,
         notification_type_name="booking_rejected",
         title=f"Booking Rejected: {booking.booking_number}",
-        message=f"Your booking for {booking.common_area.name} on {booking.booking_date} has been rejected",
+        message=f"Unfortunately, your booking for {booking.common_area.name} on {booking.booking_date} from {booking.start_time.strftime('%H:%M')} to {booking.end_time.strftime('%H:%M')} has been rejected by {booking.approved_by.get_full_name()}. Reason: {booking.rejection_reason}",
         related_object=booking,
         data={
             "url": f"/backend/bookings/{booking.id}/",
             "booking_number": booking.booking_number,
             "area_name": booking.common_area.name,
             "booking_date": booking.booking_date.strftime("%Y-%m-%d"),
+            "start_time": booking.start_time.strftime("%H:%M"),
+            "end_time": booking.end_time.strftime("%H:%M"),
             "rejection_reason": booking.rejection_reason,
+            "rejected_by": booking.approved_by.get_full_name(),
+            "rejected_at": booking.approved_at.strftime("%Y-%m-%d %H:%M"),
         },
     )
 
@@ -212,13 +220,15 @@ def _notify_booking_confirmed(booking):
         recipient=booking.resident,
         notification_type_name="booking_confirmed",
         title=f"Booking Confirmed: {booking.booking_number}",
-        message=f"Your booking for {booking.common_area.name} on {booking.booking_date} has been confirmed",
+        message=f"Your booking for {booking.common_area.name} on {booking.booking_date} has been confirmed and is ready for use",
         related_object=booking,
         data={
             "url": f"/backend/bookings/{booking.id}/",
             "booking_number": booking.booking_number,
             "area_name": booking.common_area.name,
             "booking_date": booking.booking_date.strftime("%Y-%m-%d"),
+            "start_time": booking.start_time.strftime("%H:%M"),
+            "end_time": booking.end_time.strftime("%H:%M"),
         },
     )
 

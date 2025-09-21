@@ -980,6 +980,276 @@ fetch(approveUrl, {
 
 ---
 
+## 📅 Enhanced Booking Calendar System (v2.2)
+
+### **Calendar View Architecture**
+
+**Key Features:**
+- **Interactive Calendar Interface**: Monthly view with booking visualization
+- **AJAX-Powered Navigation**: Dynamic month switching without page refresh
+- **Privacy-Aware Display**: Shows appropriate booking details based on user permissions
+- **Timezone-Safe Operations**: Proper handling of Asia/Kolkata timezone
+- **Mobile-Responsive Design**: Optimized for all device sizes
+
+### **Calendar View Implementation**
+
+```python
+@login_required
+def booking_calendar(request):
+    """
+    Enhanced calendar view for facility bookings with proper data serialization.
+    Shows current bookings so residents can plan their requests accordingly.
+    """
+    # Get filter parameters from request
+    month = request.GET.get('month', timezone.now().month)
+    year = request.GET.get('year', timezone.now().year)
+    
+    # Create date range for the requested month
+    start_of_month = date(year, month, 1)
+    end_of_month = (start_of_month + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    
+    # Get bookings with privacy controls
+    bookings = Booking.objects.filter(
+        booking_date__range=[start_of_month, end_of_month],
+        status__in=["pending", "approved", "confirmed", "completed"]
+    ).select_related('common_area', 'resident', 'resident__resident')
+    
+    # Serialize with permission-based data filtering
+    bookings_data = []
+    for booking in bookings:
+        if booking.resident == request.user or is_committee_member(request.user):
+            # Full details for own bookings or committee members
+            booking_data = {
+                'id': booking.id,
+                'booking_number': booking.booking_number,
+                'purpose': booking.purpose,
+                'resident_name': booking.resident.get_full_name(),
+                'is_own_booking': True
+                # ... full details
+            }
+        else:
+            # Limited details for privacy
+            booking_data = {
+                'purpose': 'Private Event',
+                'resident_name': 'Resident',
+                'is_own_booking': False
+                # ... limited details
+            }
+        bookings_data.append(booking_data)
+```
+
+### **AJAX API Endpoint**
+
+```python
+@login_required
+def booking_calendar_api(request):
+    """
+    API endpoint for dynamic calendar data loading.
+    Returns booking data for a specific month/year as JSON.
+    """
+    month = int(request.GET.get('month', timezone.now().month))
+    year = int(request.GET.get('year', timezone.now().year))
+    area_filter = request.GET.get('area', '')
+    
+    # Dynamic data loading with filtering support
+    bookings_query = Booking.objects.filter(
+        booking_date__range=[start_of_month, end_of_month],
+        status__in=["pending", "approved", "confirmed", "completed"]
+    )
+    
+    if area_filter:
+        bookings_query = bookings_query.filter(common_area_id=area_filter)
+    
+    return JsonResponse({
+        'bookings': bookings_data,
+        'month': month,
+        'year': year,
+        'success': True
+    })
+```
+
+### **Frontend Calendar Features**
+
+**JavaScript Implementation:**
+```javascript
+// Timezone-safe date handling for Asia/Kolkata
+function handleDayClick(day) {
+    const selectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    
+    // Fix timezone issue: Use local date formatting instead of ISO
+    const year = selectedDate.getFullYear();
+    const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(selectedDate.getDate()).padStart(2, '0');
+    const dateString = `${year}-${month}-${dayStr}`;
+    
+    window.location.href = `/backend/bookings/create/?date=${dateString}`;
+}
+
+// AJAX calendar navigation
+function loadCalendarData() {
+    const apiUrl = new URL('/backend/bookings/calendar/api/', window.location.origin);
+    apiUrl.searchParams.append('month', month);
+    apiUrl.searchParams.append('year', year);
+    
+    fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+            bookingsData = groupBookingsByArea(data.bookings);
+            renderCalendar();
+        });
+}
+```
+
+**Key Frontend Features:**
+- **Visual Status Indicators**: Color-coded booking statuses (green=confirmed, yellow=pending, etc.)
+- **Interactive Booking Details**: Click on bookings to view details in modal
+- **Quick Booking Creation**: Click on available dates to create bookings
+- **Facility Filtering**: Filter calendar by specific common areas
+- **Mobile Optimization**: Responsive design for all screen sizes
+
+### **Privacy & Permission Controls**
+
+**Data Visibility Rules:**
+```python
+# Permission-based booking information display
+if booking.resident == request.user or is_committee_member(request.user):
+    # Show full booking details including:
+    # - Actual purpose
+    # - Resident name and flat number
+    # - Guest count and fees
+    # - Full booking management options
+else:
+    # Show limited information for planning purposes:
+    # - Generic "Private Event" purpose
+    # - Anonymous "Resident" name
+    # - Time slots only (for availability planning)
+```
+
+**Security Features:**
+- **Role-Based Access**: Different information visibility based on user type
+- **Privacy Protection**: Personal details hidden from other residents
+- **Planning Transparency**: Enough information for residents to plan without privacy invasion
+
+---
+
+## 🔔 Enhanced Booking Notification Workflow (v2.2)
+
+### **Complete Bidirectional Notification System**
+
+**Fixed Issues:**
+- **Signal Handler Bug**: Fixed `_handle_booking_status_change` that wasn't triggering notifications
+- **Missing Notifications**: Residents now receive notifications when bookings are approved/rejected
+- **Manual Triggers**: Added explicit notification calls in approval views
+
+### **Notification Flow Implementation**
+
+```python
+# Enhanced approval view with manual notification triggers
+@login_required
+def approve_booking(request, booking_id):
+    """
+    Approve or reject a booking with proper notification workflow.
+    """
+    booking = get_object_or_404(Booking, id=booking_id)
+    
+    # Perform approval/rejection
+    approved = (action == "approve")
+    booking.approve_booking(
+        approver=request.user,
+        approved=approved,
+        rejection_reason=rejection_reason if not approved else None
+    )
+    
+    # Manually trigger notifications (bypassing broken signal handler)
+    from .signals import _notify_booking_approved, _notify_booking_rejected
+    
+    if approved:
+        _notify_booking_approved(booking)
+    else:
+        _notify_booking_rejected(booking)
+    
+    return JsonResponse({"status": "success"})
+```
+
+### **Enhanced Notification Messages**
+
+```python
+def _notify_booking_approved(booking):
+    """Enhanced approval notification with detailed information."""
+    NotificationService.create_notification(
+        recipient=booking.resident,
+        notification_type_name="booking_approved",
+        title=f"Booking Approved: {booking.booking_number}",
+        message=f"Great news! Your booking for {booking.common_area.name} on {booking.booking_date} from {booking.start_time.strftime('%H:%M')} to {booking.end_time.strftime('%H:%M')} has been approved by {booking.approved_by.get_full_name()}",
+        data={
+            "booking_number": booking.booking_number,
+            "area_name": booking.common_area.name,
+            "start_time": booking.start_time.strftime("%H:%M"),
+            "end_time": booking.end_time.strftime("%H:%M"),
+            "approved_by": booking.approved_by.get_full_name(),
+            "approved_at": booking.approved_at.strftime("%Y-%m-%d %H:%M"),
+        }
+    )
+
+def _notify_booking_rejected(booking):
+    """Enhanced rejection notification with reason and details."""
+    NotificationService.create_notification(
+        recipient=booking.resident,
+        notification_type_name="booking_rejected",
+        message=f"Unfortunately, your booking for {booking.common_area.name} on {booking.booking_date} from {booking.start_time.strftime('%H:%M')} to {booking.end_time.strftime('%H:%M')} has been rejected by {booking.approved_by.get_full_name()}. Reason: {booking.rejection_reason}",
+        data={
+            "rejection_reason": booking.rejection_reason,
+            "rejected_by": booking.approved_by.get_full_name(),
+            "rejected_at": booking.approved_at.strftime("%Y-%m-%d %H:%M"),
+        }
+    )
+```
+
+### **Complete Notification Workflow**
+
+**Booking Creation → Approval Request:**
+1. Resident creates booking → Designated approver receives notification ✅
+2. Email + in-app notification sent to approver
+3. Notification includes booking details and approval link
+
+**Approval Decision → Resident Notification:**
+1. Approver approves/rejects → Resident receives notification ✅ (Fixed)
+2. Detailed notification with approver name and timestamp
+3. Rejection notifications include reason and next steps
+
+**Status Updates → Relevant Parties:**
+1. Status changes (confirmed/cancelled) → Notifications sent ✅
+2. Committee members can update status with notifications
+3. Complete audit trail maintained
+
+### **Timezone Handling Improvements**
+
+**Problem Solved:**
+- **JavaScript Date Issues**: `toISOString()` was causing timezone conversion problems
+- **Asia/Kolkata Timezone**: UTC+5:30 offset was shifting dates by one day
+- **Calendar Date Selection**: Clicking dates was pre-filling wrong dates in forms
+
+**Solution Implemented:**
+```javascript
+// Before (problematic):
+const dateString = selectedDate.toISOString().split('T')[0];
+
+// After (timezone-safe):
+const year = selectedDate.getFullYear();
+const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+const dayStr = String(selectedDate.getDate()).padStart(2, '0');
+const dateString = `${year}-${month}-${dayStr}`;
+```
+
+**Django Configuration:**
+```python
+# settings/base.py
+TIME_ZONE = "Asia/Kolkata"
+USE_TZ = True
+```
+
+---
+
 ## 🔐 Permission & Access Control
 
 ### Permission Checking Framework
@@ -2829,7 +3099,7 @@ the_khaki_estate/
 
 **This technical documentation is maintained alongside the codebase. For questions or contributions, please refer to the development team or create an issue in the project repository.**
 
-**Last Updated**: Sepember 19, 2025
+**Last Updated**: September 21, 2025
 ### **Template Architecture Best Practices**
 
 ```python
@@ -2850,5 +3120,5 @@ context = {
 # GOOD: {{ maintenance_request.title }} - preserves request.user
 ```
 
-**Documentation Version**: 2.1
-**System Version**: The Khaki Estate Management System v2.1
+**Documentation Version**: 2.2
+**System Version**: The Khaki Estate Management System v2.2

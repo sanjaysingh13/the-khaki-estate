@@ -1,17 +1,5 @@
 {% extends "base.html" %} {% load static %} {% block title %}{{ booking.booking_number }} - Booking Details{% endblock %} {% block content %}
 <div class="container-fluid">
-    <!-- Breadcrumb Navigation -->
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item">
-                <a href="{% url 'backend:dashboard' %}">Dashboard</a>
-            </li>
-            <li class="breadcrumb-item">
-                <a href="{% url 'backend:booking_list' %}">Facility Bookings</a>
-            </li>
-            <li class="breadcrumb-item active" aria-current="page">{{ booking.booking_number }}</li>
-        </ol>
-    </nav>
     <div class="row">
         <!-- Main Content -->
         <div class="col-lg-8">

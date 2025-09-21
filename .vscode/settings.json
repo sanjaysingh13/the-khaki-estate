@@ -1,0 +1,28 @@
+{
+  "emmet.includeLanguages": {
+    "django-html": "html"
+  },
+  "files.associations": {
+    "*.html": "django-html"
+  },
+  "editor.formatOnSave": true,
+  "editor.formatOnSaveMode": "modifications",
+  "[django-html]": {
+    "editor.formatOnSave": false,
+    "editor.quickSuggestions": {
+      "other": true,
+      "comments": true,
+      "strings": true
+    }
+  },
+  "[html]": {
+    "editor.formatOnSave": false
+  },
+  "prettier.disableLanguages": ["django-html", "html"],
+  "javascript.format.enable": false,
+  "typescript.format.enable": false,
+  "html.format.enable": false,
+  "beautify.ignore": [
+    "**/*.html"
+  ]
+}

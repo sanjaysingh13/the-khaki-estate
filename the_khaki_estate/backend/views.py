@@ -1,3 +1,5 @@
+import json
+from datetime import date
 from datetime import datetime
 from datetime import timedelta
 
@@ -866,34 +868,176 @@ def booking_list(request):
 @login_required
 def booking_calendar(request):
     """
-    Calendar view for facility bookings
+    Enhanced calendar view for facility bookings with proper data serialization.
+    Shows current bookings so residents can plan their requests accordingly.
     """
+    # Get filter parameters from request
+    month = request.GET.get('month', timezone.now().month)
+    year = request.GET.get('year', timezone.now().year)
+    
+    try:
+        month = int(month)
+        year = int(year)
+    except (ValueError, TypeError):
+        month = timezone.now().month
+        year = timezone.now().year
+    
+    # Create date range for the requested month
+    start_of_month = date(year, month, 1)
+    end_of_month = (start_of_month + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    
+    # Get all common areas
     common_areas = CommonArea.objects.filter(is_active=True)
-
-    # Get bookings for the current month
-    today = timezone.now().date()
-    start_of_month = today.replace(day=1)
-    end_of_month = (start_of_month + timedelta(days=32)).replace(day=1) - timedelta(
-        days=1,
-    )
-
+    
+    # Get bookings for the month - include all statuses except cancelled for visibility
     bookings = Booking.objects.filter(
         booking_date__range=[start_of_month, end_of_month],
-        status__in=["confirmed", "pending"],
+        status__in=["pending", "approved", "confirmed", "completed"]
+    ).select_related(
+        'common_area', 'resident', 'resident__resident'
     ).order_by("booking_date", "start_time")
-
-    # Group bookings by area for calendar display
+    
+    # Filter based on user permissions
+    if not is_committee_member(request.user):
+        # Regular residents see all bookings (for planning) but with limited details
+        # They can see their own bookings with full details
+        pass  # Show all bookings for planning purposes
+    
+    # Serialize bookings data for JavaScript consumption
+    bookings_data = []
+    for booking in bookings:
+        # Determine what details to show based on user permissions
+        if booking.resident == request.user or is_committee_member(request.user):
+            # Full details for own bookings or committee members
+            booking_data = {
+                'id': booking.id,
+                'booking_number': booking.booking_number,
+                'common_area_id': booking.common_area.id,
+                'common_area_name': booking.common_area.name,
+                'booking_date': booking.booking_date.isoformat(),
+                'start_time': booking.start_time.strftime('%H:%M'),
+                'end_time': booking.end_time.strftime('%H:%M'),
+                'purpose': booking.purpose,
+                'status': booking.status,
+                'guests_count': booking.guests_count,
+                'total_fee': float(booking.total_fee) if booking.total_fee else 0,
+                'resident_name': booking.resident.get_full_name(),
+                'resident_flat': getattr(booking.resident.resident, 'flat_number', 'N/A') if hasattr(booking.resident, 'resident') else 'N/A',
+                'is_own_booking': booking.resident == request.user
+            }
+        else:
+            # Limited details for other residents' bookings (for planning purposes)
+            booking_data = {
+                'id': booking.id,
+                'common_area_id': booking.common_area.id,
+                'common_area_name': booking.common_area.name,
+                'booking_date': booking.booking_date.isoformat(),
+                'start_time': booking.start_time.strftime('%H:%M'),
+                'end_time': booking.end_time.strftime('%H:%M'),
+                'status': booking.status,
+                'purpose': 'Private Event',  # Generic purpose for privacy
+                'resident_name': 'Resident',  # Anonymous for privacy
+                'is_own_booking': False
+            }
+        bookings_data.append(booking_data)
+    
+    # Group bookings by area for easier frontend processing
     bookings_by_area = {}
     for area in common_areas:
-        bookings_by_area[area.id] = bookings.filter(common_area=area)
-
+        area_bookings = [b for b in bookings_data if b['common_area_id'] == area.id]
+        bookings_by_area[str(area.id)] = area_bookings
+    
     context = {
         "common_areas": common_areas,
-        "bookings_by_area": bookings_by_area,
-        "current_month": today.strftime("%B %Y"),
+        "bookings_by_area": json.dumps(bookings_by_area),  # Properly serialize for JavaScript
+        "current_month": start_of_month.strftime("%B %Y"),
+        "current_month_number": month,
+        "current_year": year,
+        "is_committee": is_committee_member(request.user),
+        "today": timezone.now().date().isoformat(),
     }
 
     return render(request, "backend/bookings/calendar.html", context)
+
+
+@login_required
+def booking_calendar_api(request):
+    """
+    API endpoint for dynamic calendar data loading.
+    Returns booking data for a specific month/year as JSON.
+    """
+    # Get parameters from request
+    month = request.GET.get('month', timezone.now().month)
+    year = request.GET.get('year', timezone.now().year)
+    area_filter = request.GET.get('area', '')
+    
+    try:
+        month = int(month)
+        year = int(year)
+        area_filter = int(area_filter) if area_filter else None
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'Invalid parameters'}, status=400)
+    
+    # Create date range for the requested month
+    start_of_month = date(year, month, 1)
+    end_of_month = (start_of_month + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    
+    # Build query for bookings
+    bookings_query = Booking.objects.filter(
+        booking_date__range=[start_of_month, end_of_month],
+        status__in=["pending", "approved", "confirmed", "completed"]
+    ).select_related('common_area', 'resident', 'resident__resident')
+    
+    # Apply area filter if specified
+    if area_filter:
+        bookings_query = bookings_query.filter(common_area_id=area_filter)
+    
+    bookings = bookings_query.order_by("booking_date", "start_time")
+    
+    # Serialize bookings data
+    bookings_data = []
+    for booking in bookings:
+        # Privacy controls: show limited info for other residents' bookings
+        if booking.resident == request.user or is_committee_member(request.user):
+            booking_data = {
+                'id': booking.id,
+                'booking_number': booking.booking_number,
+                'common_area_id': booking.common_area.id,
+                'common_area_name': booking.common_area.name,
+                'booking_date': booking.booking_date.isoformat(),
+                'start_time': booking.start_time.strftime('%H:%M'),
+                'end_time': booking.end_time.strftime('%H:%M'),
+                'purpose': booking.purpose,
+                'status': booking.status,
+                'guests_count': getattr(booking, 'guests_count', 0),
+                'total_fee': float(getattr(booking, 'total_fee', 0)) if hasattr(booking, 'total_fee') else 0,
+                'resident_name': booking.resident.get_full_name(),
+                'resident_flat': getattr(booking.resident.resident, 'flat_number', 'N/A') if hasattr(booking.resident, 'resident') else 'N/A',
+                'is_own_booking': True
+            }
+        else:
+            # Limited info for privacy
+            booking_data = {
+                'id': booking.id,
+                'common_area_id': booking.common_area.id,
+                'common_area_name': booking.common_area.name,
+                'booking_date': booking.booking_date.isoformat(),
+                'start_time': booking.start_time.strftime('%H:%M'),
+                'end_time': booking.end_time.strftime('%H:%M'),
+                'status': booking.status,
+                'purpose': 'Private Event',
+                'resident_name': 'Resident',
+                'is_own_booking': False
+            }
+        bookings_data.append(booking_data)
+    
+    return JsonResponse({
+        'bookings': bookings_data,
+        'month': month,
+        'year': year,
+        'month_name': start_of_month.strftime("%B %Y"),
+        'success': True
+    })
 
 
 @login_required
@@ -981,8 +1125,19 @@ def booking_create(request):
 
     # GET request - show form
     common_areas = CommonArea.objects.filter(is_active=True)
+    
+    # Check if date is pre-filled from calendar
+    prefilled_date = request.GET.get('date', '')
+    if prefilled_date:
+        try:
+            # Validate the date format
+            datetime.strptime(prefilled_date, '%Y-%m-%d')
+        except ValueError:
+            prefilled_date = ''  # Invalid date format, clear it
+    
     context = {
         "common_areas": common_areas,
+        "prefilled_date": prefilled_date,
     }
 
     return render(request, "backend/bookings/create.html", context)
@@ -1066,7 +1221,13 @@ def approve_booking(request, booking_id):
             rejection_reason=rejection_reason if not approved else None
         )
         
-        # The signal handler will automatically send notifications
+        # Manually trigger notifications since signal handler has issues
+        from .signals import _notify_booking_approved, _notify_booking_rejected
+        
+        if approved:
+            _notify_booking_approved(booking)
+        else:
+            _notify_booking_rejected(booking)
         
         action_message = "approved" if approved else "rejected"
         return JsonResponse({
@@ -1138,7 +1299,13 @@ def update_booking_status(request, booking_id):
         booking.status_changed_by = request.user
         booking.save()
         
-        # The signal handler will automatically send notifications
+        # Manually trigger notifications for specific status changes
+        from .signals import _notify_booking_confirmed, _notify_booking_cancelled
+        
+        if new_status == "confirmed":
+            _notify_booking_confirmed(booking)
+        elif new_status == "cancelled":
+            _notify_booking_cancelled(booking)
         
         return JsonResponse({
             "status": "success", 

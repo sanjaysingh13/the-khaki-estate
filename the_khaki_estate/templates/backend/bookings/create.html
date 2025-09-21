@@ -1,63 +1,59 @@
-{% extends "base.html" %}
-
-{% load static %}
-
-{% block title %}Book Facility - Housing Complex Management{% endblock %}
-{% block content %}
-  <style>
-    .preview-hidden { display: none; }
-  </style>
-  <div class="container-fluid">
+{% extends "base.html" %} {% load static %} {% block title %}Book Facility - Housing Complex Management{% endblock %} {% block content %}
+<style>
+    .preview-hidden {
+        display: none;
+    }
+</style>
+<div class="container-fluid">
     <!-- Breadcrumb Navigation -->
     <nav aria-label="breadcrumb" class="mb-4">
-      <ol class="breadcrumb">
-        <li class="breadcrumb-item">
-          <a href="{% url 'backend:dashboard' %}">Dashboard</a>
-        </li>
-        <li class="breadcrumb-item">
-          <a href="{% url 'backend:booking_list' %}">Facility Bookings</a>
-        </li>
-        <li class="breadcrumb-item active" aria-current="page">New Booking</li>
-      </ol>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'backend:dashboard' %}">Dashboard</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'backend:booking_list' %}">Facility Bookings</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">New Booking</li>
+        </ol>
     </nav>
     <!-- Page Header -->
     <div class="row mb-4">
-      <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h1 class="h3 mb-0">
-              <i class="fas fa-calendar-plus text-primary me-2"></i> Book Facility
-            </h1>
-            <p class="text-muted mb-0">Reserve common areas and facilities for your events</p>
-          </div>
-          <div>
-            <a href="{% url 'backend:booking_list' %}"
-               class="btn btn-outline-secondary">
-              <i class="fas fa-arrow-left me-2"></i>Back to Bookings
-            </a>
-          </div>
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="fas fa-calendar-plus text-primary me-2"></i> Book Facility
+                    </h1>
+                    <p class="text-muted mb-0">Reserve common areas and facilities for your events</p>
+                </div>
+                <div>
+                    <a href="{% url 'backend:booking_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Bookings
+                    </a>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
     <div class="row">
-      <!-- Main Form -->
-      <div class="col-lg-8">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="card-title mb-0">
-              <i class="fas fa-edit text-primary me-2"></i> Booking Details
-            </h5>
-          </div>
-          <div class="card-body">
-            <form method="post" id="booking-form">
-              {% csrf_token %}
-              <!-- Facility Selection -->
-              <div class="mb-4">
-                <label for="common_area" class="form-label">
+        <!-- Main Form -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-edit text-primary me-2"></i> Booking Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="booking-form">
+                        {% csrf_token %}
+                        <!-- Facility Selection -->
+                        <div class="mb-4">
+                            <label for="common_area" class="form-label">
                   <i class="fas fa-building me-1"></i>
                   Select Facility <span class="text-danger">*</span>
                 </label>
-                <select class="form-select" id="common_area" name="common_area" required>
+                            <select class="form-select" id="common_area" name="common_area" required>
                   <option value="">Choose a facility...</option>
                   {% for area in common_areas %}
                     <option value="{{ area.id }}"
@@ -77,438 +73,410 @@
                     </option>
                   {% endfor %}
                 </select>
-                <div class="form-text">Select the facility you want to book</div>
-              </div>
-              <!-- Facility Information Display -->
-              <div id="facility-info" class="mb-4" class="preview-hidden">
-                <div class="alert alert-info">
-                  <h6 class="alert-heading">Facility Information</h6>
-                  <div class="row">
-                    <div class="col-md-6">
-                      <small><strong>Capacity:</strong> <span id="info-capacity"></span> people</small>
-                      <br />
-                      <small><strong>Booking Fee:</strong> ₹<span id="info-fee"></span>/hour</small>
-                    </div>
-                    <div class="col-md-6">
-                      <small><strong>Advance Booking:</strong> <span id="info-advance"></span> days</small>
-                      <br />
-                      <small><strong>Available Hours:</strong> <span id="info-hours"></span></small>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <!-- Date Selection -->
-              <div class="mb-4">
-                <label for="booking_date" class="form-label">
+                            <div class="form-text">Select the facility you want to book</div>
+                        </div>
+                        <!-- Facility Information Display -->
+                        <div id="facility-info" class="mb-4" class="preview-hidden">
+                            <div class="alert alert-info">
+                                <h6 class="alert-heading">Facility Information</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <small><strong>Capacity:</strong> <span id="info-capacity"></span> people</small>
+                                        <br />
+                                        <small><strong>Booking Fee:</strong> ₹<span id="info-fee"></span>/hour</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <small><strong>Advance Booking:</strong> <span id="info-advance"></span> days</small>
+                                        <br />
+                                        <small><strong>Available Hours:</strong> <span id="info-hours"></span></small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Date Selection -->
+                        <div class="mb-4">
+                            <label for="booking_date" class="form-label">
                   <i class="fas fa-calendar me-1"></i>
                   Booking Date <span class="text-danger">*</span>
                 </label>
-                <input type="date"
-                       class="form-control"
-                       id="booking_date"
-                       name="booking_date"
-                       required />
-                <div class="form-text">Select the date for your booking</div>
-              </div>
-              <!-- Time Selection -->
-              <div class="row mb-4">
-                <div class="col-md-6">
-                  <label for="start_time" class="form-label">
+                            <input type="date" class="form-control" id="booking_date" name="booking_date" value="{{ prefilled_date }}" required />
+                            <div class="form-text">Select the date for your booking</div>
+                        </div>
+                        <!-- Time Selection -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="start_time" class="form-label">
                     <i class="fas fa-clock me-1"></i>
                     Start Time <span class="text-danger">*</span>
                   </label>
-                  <input type="time"
-                         class="form-control"
-                         id="start_time"
-                         name="start_time"
-                         required />
-                </div>
-                <div class="col-md-6">
-                  <label for="end_time" class="form-label">
+                                <input type="time" class="form-control" id="start_time" name="start_time" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label for="end_time" class="form-label">
                     <i class="fas fa-clock me-1"></i>
                     End Time <span class="text-danger">*</span>
                   </label>
-                  <input type="time"
-                         class="form-control"
-                         id="end_time"
-                         name="end_time"
-                         required />
-                </div>
-              </div>
-              <!-- Purpose -->
-              <div class="mb-4">
-                <label for="purpose" class="form-label">
+                                <input type="time" class="form-control" id="end_time" name="end_time" required />
+                            </div>
+                        </div>
+                        <!-- Purpose -->
+                        <div class="mb-4">
+                            <label for="purpose" class="form-label">
                   <i class="fas fa-comment me-1"></i>
                   Purpose of Booking <span class="text-danger">*</span>
                 </label>
-                <textarea class="form-control"
-                          id="purpose"
-                          name="purpose"
-                          rows="3"
-                          placeholder="Describe the purpose of your booking..."
-                          required></textarea>
-                <div class="form-text">Provide details about your event or activity</div>
-              </div>
-              <!-- Guest Count -->
-              <div class="mb-4">
-                <label for="guests_count" class="form-label">
+                            <textarea class="form-control" id="purpose" name="purpose" rows="3" placeholder="Describe the purpose of your booking..." required></textarea>
+                            <div class="form-text">Provide details about your event or activity</div>
+                        </div>
+                        <!-- Guest Count -->
+                        <div class="mb-4">
+                            <label for="guests_count" class="form-label">
                   <i class="fas fa-users me-1"></i>
                   Number of Guests
                 </label>
-                <input type="number"
-                       class="form-control"
-                       id="guests_count"
-                       name="guests_count"
-                       min="0"
-                       max="100"
-                       value="0" />
-                <div class="form-text">Include yourself in the count</div>
-              </div>
-              <!-- Booking Summary -->
-              <div class="mb-4">
-                <div class="card border">
-                  <div class="card-header">
-                    <h6 class="card-title mb-0">
-                      <i class="fas fa-calculator text-primary me-2"></i> Booking Summary
-                    </h6>
-                  </div>
-                  <div class="card-body">
-                    <div class="row">
-                      <div class="col-md-6">
-                        <small class="text-muted">Facility:</small>
-                        <br />
-                        <span id="summary-facility">Not selected</span>
-                      </div>
-                      <div class="col-md-6">
-                        <small class="text-muted">Date & Time:</small>
-                        <br />
-                        <span id="summary-datetime">Not selected</span>
-                      </div>
-                    </div>
-                    <hr />
-                    <div class="row">
-                      <div class="col-md-6">
-                        <small class="text-muted">Duration:</small>
-                        <br />
-                        <span id="summary-duration">0 hours</span>
-                      </div>
-                      <div class="col-md-6">
-                        <small class="text-muted">Total Fee:</small>
-                        <br />
-                        <span id="summary-fee" class="fw-bold">₹0</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <!-- Form Actions -->
-              <div class="d-flex justify-content-between">
-                <a href="{% url 'backend:booking_list' %}"
-                   class="btn btn-outline-secondary">
-                  <i class="fas fa-times me-2"></i>Cancel
-                </a>
-                <div>
-                  <button type="button"
-                          class="btn btn-outline-primary me-2"
-                          id="check-availability">
+                            <input type="number" class="form-control" id="guests_count" name="guests_count" min="0" max="100" value="0" />
+                            <div class="form-text">Include yourself in the count</div>
+                        </div>
+                        <!-- Booking Summary -->
+                        <div class="mb-4">
+                            <div class="card border">
+                                <div class="card-header">
+                                    <h6 class="card-title mb-0">
+                                        <i class="fas fa-calculator text-primary me-2"></i> Booking Summary
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <small class="text-muted">Facility:</small>
+                                            <br />
+                                            <span id="summary-facility">Not selected</span>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <small class="text-muted">Date & Time:</small>
+                                            <br />
+                                            <span id="summary-datetime">Not selected</span>
+                                        </div>
+                                    </div>
+                                    <hr />
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <small class="text-muted">Duration:</small>
+                                            <br />
+                                            <span id="summary-duration">0 hours</span>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <small class="text-muted">Total Fee:</small>
+                                            <br />
+                                            <span id="summary-fee" class="fw-bold">₹0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'backend:booking_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                            <div>
+                                <button type="button" class="btn btn-outline-primary me-2" id="check-availability">
                     <i class="fas fa-search me-2"></i>Check Availability
                   </button>
-                  <button type="submit" class="btn btn-primary">
+                                <button type="submit" class="btn btn-primary">
                     <i class="fas fa-calendar-plus me-2"></i>Confirm Booking
                   </button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-      <!-- Sidebar -->
-      <div class="col-lg-4">
-        <!-- Booking Guidelines -->
-        <div class="card mb-4">
-          <div class="card-header">
-            <h5 class="card-title mb-0">
-              <i class="fas fa-lightbulb text-warning me-2"></i> Booking Guidelines
-            </h5>
-          </div>
-          <div class="card-body">
-            <div class="list-group list-group-flush">
-              <div class="list-group-item border-0 px-0">
-                <h6 class="text-primary mb-1">
-                  <i class="fas fa-check-circle me-1"></i> Before Booking
-                </h6>
-                <ul class="small mb-0">
-                  <li>Check facility availability</li>
-                  <li>Read facility rules and policies</li>
-                  <li>Plan your event details</li>
-                  <li>Consider guest count limits</li>
-                </ul>
-              </div>
-              <div class="list-group-item border-0 px-0">
-                <h6 class="text-warning mb-1">
-                  <i class="fas fa-exclamation-triangle me-1"></i> Important Notes
-                </h6>
-                <ul class="small mb-0">
-                  <li>Bookings require committee approval</li>
-                  <li>Payment must be completed before use</li>
-                  <li>Cancellation policy applies</li>
-                  <li>Follow facility usage rules</li>
-                </ul>
-              </div>
-              <div class="list-group-item border-0 px-0">
-                <h6 class="text-info mb-1">
-                  <i class="fas fa-info-circle me-1"></i> Booking Process
-                </h6>
-                <ul class="small mb-0">
-                  <li>Submit booking request</li>
-                  <li>Committee reviews and approves</li>
-                  <li>Payment processing</li>
-                  <li>Confirmation and access</li>
-                </ul>
-              </div>
             </div>
-          </div>
         </div>
-        <!-- Available Facilities -->
-        <div class="card mb-4">
-          <div class="card-header">
-            <h5 class="card-title mb-0">
-              <i class="fas fa-building text-secondary me-2"></i> Available Facilities
-            </h5>
-          </div>
-          <div class="card-body">
-            <div class="list-group list-group-flush">
-              {% for area in common_areas %}
-                <div class="list-group-item border-0 px-0">
-                  <h6 class="mb-1">{{ area.name }}</h6>
-                  <small class="text-muted">
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Booking Guidelines -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-lightbulb text-warning me-2"></i> Booking Guidelines
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item border-0 px-0">
+                            <h6 class="text-primary mb-1">
+                                <i class="fas fa-check-circle me-1"></i> Before Booking
+                            </h6>
+                            <ul class="small mb-0">
+                                <li>Check facility availability</li>
+                                <li>Read facility rules and policies</li>
+                                <li>Plan your event details</li>
+                                <li>Consider guest count limits</li>
+                            </ul>
+                        </div>
+                        <div class="list-group-item border-0 px-0">
+                            <h6 class="text-warning mb-1">
+                                <i class="fas fa-exclamation-triangle me-1"></i> Important Notes
+                            </h6>
+                            <ul class="small mb-0">
+                                <li>Bookings require committee approval</li>
+                                <li>Payment must be completed before use</li>
+                                <li>Cancellation policy applies</li>
+                                <li>Follow facility usage rules</li>
+                            </ul>
+                        </div>
+                        <div class="list-group-item border-0 px-0">
+                            <h6 class="text-info mb-1">
+                                <i class="fas fa-info-circle me-1"></i> Booking Process
+                            </h6>
+                            <ul class="small mb-0">
+                                <li>Submit booking request</li>
+                                <li>Committee reviews and approves</li>
+                                <li>Payment processing</li>
+                                <li>Confirmation and access</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Available Facilities -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-building text-secondary me-2"></i> Available Facilities
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for area in common_areas %}
+                        <div class="list-group-item border-0 px-0">
+                            <h6 class="mb-1">{{ area.name }}</h6>
+                            <small class="text-muted">
                     Capacity: {{ area.capacity }} |
                     Fee: ₹{{ area.booking_fee }}/hour |
                     Advance: {{ area.advance_booking_days }} days
                   </small>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
-              {% endfor %}
             </div>
-          </div>
-        </div>
-        <!-- Quick Actions -->
-        <div class="card">
-          <div class="card-header">
-            <h5 class="card-title mb-0">
-              <i class="fas fa-link text-primary me-2"></i> Quick Actions
-            </h5>
-          </div>
-          <div class="card-body">
-            <div class="d-grid gap-2">
-              <a href="{% url 'backend:booking_calendar' %}"
-                 class="btn btn-outline-primary">
-                <i class="fas fa-calendar-alt me-2"></i>View Calendar
-              </a>
-              <a href="{% url 'backend:booking_list' %}"
-                 class="btn btn-outline-secondary">
-                <i class="fas fa-list me-2"></i>My Bookings
-              </a>
+            <!-- Quick Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-link text-primary me-2"></i> Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'backend:booking_calendar' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-calendar-alt me-2"></i>View Calendar
+                        </a>
+                        <a href="{% url 'backend:booking_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-list me-2"></i>My Bookings
+                        </a>
+                    </div>
+                </div>
             </div>
-          </div>
         </div>
-      </div>
     </div>
-  </div>
-  <!-- JavaScript for Enhanced Booking Functionality -->
-  <script>
+</div>
+<!-- JavaScript for Enhanced Booking Functionality -->
+<script>
     document.addEventListener('DOMContentLoaded', function() {
-      const form = document.getElementById('booking-form');
-      const facilitySelect = document.getElementById('common_area');
-      const bookingDateInput = document.getElementById('booking_date');
-      const startTimeInput = document.getElementById('start_time');
-      const endTimeInput = document.getElementById('end_time');
-      const purposeInput = document.getElementById('purpose');
-      const guestsCountInput = document.getElementById('guests_count');
-      const facilityInfo = document.getElementById('facility-info');
-      const checkAvailabilityBtn = document.getElementById('check-availability');
+        const form = document.getElementById('booking-form');
+        const facilitySelect = document.getElementById('common_area');
+        const bookingDateInput = document.getElementById('booking_date');
+        const startTimeInput = document.getElementById('start_time');
+        const endTimeInput = document.getElementById('end_time');
+        const purposeInput = document.getElementById('purpose');
+        const guestsCountInput = document.getElementById('guests_count');
+        const facilityInfo = document.getElementById('facility-info');
+        const checkAvailabilityBtn = document.getElementById('check-availability');
 
-      // Summary elements
-      const summaryFacility = document.getElementById('summary-facility');
-      const summaryDatetime = document.getElementById('summary-datetime');
-      const summaryDuration = document.getElementById('summary-duration');
-      const summaryFee = document.getElementById('summary-fee');
+        // Summary elements
+        const summaryFacility = document.getElementById('summary-facility');
+        const summaryDatetime = document.getElementById('summary-datetime');
+        const summaryDuration = document.getElementById('summary-duration');
+        const summaryFee = document.getElementById('summary-fee');
 
-      // Set minimum date to today
-      const today = new Date().toISOString().split('T')[0];
-      bookingDateInput.min = today;
+        // Set minimum date to today
+        const today = new Date().toISOString().split('T')[0];
+        bookingDateInput.min = today;
 
-      // Facility selection handler
-      facilitySelect.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        if (selectedOption.value) {
-          // Show facility information
-          facilityInfo.style.display = 'block';
+        // Facility selection handler
+        facilitySelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption.value) {
+                // Show facility information
+                facilityInfo.style.display = 'block';
 
-          // Update facility info
-          document.getElementById('info-capacity').textContent = selectedOption.dataset.capacity;
-          document.getElementById('info-fee').textContent = selectedOption.dataset.fee;
-          document.getElementById('info-advance').textContent = selectedOption.dataset.advanceDays;
-          document.getElementById('info-hours').textContent =
-            `${selectedOption.dataset.startTime} - ${selectedOption.dataset.endTime}`;
+                // Update facility info
+                document.getElementById('info-capacity').textContent = selectedOption.dataset.capacity;
+                document.getElementById('info-fee').textContent = selectedOption.dataset.fee;
+                document.getElementById('info-advance').textContent = selectedOption.dataset.advanceDays;
+                document.getElementById('info-hours').textContent =
+                    `${selectedOption.dataset.startTime} - ${selectedOption.dataset.endTime}`;
 
-          // Update summary
-          summaryFacility.textContent = selectedOption.text.split(' (')[0];
+                // Update summary
+                summaryFacility.textContent = selectedOption.text.split(' (')[0];
 
-          // Set time constraints
-          startTimeInput.min = selectedOption.dataset.startTime;
-          startTimeInput.max = selectedOption.dataset.endTime;
-          endTimeInput.min = selectedOption.dataset.startTime;
-          endTimeInput.max = selectedOption.dataset.endTime;
+                // Set time constraints
+                startTimeInput.min = selectedOption.dataset.startTime;
+                startTimeInput.max = selectedOption.dataset.endTime;
+                endTimeInput.min = selectedOption.dataset.startTime;
+                endTimeInput.max = selectedOption.dataset.endTime;
 
-          // Set maximum booking date
-          const maxDate = new Date();
-          maxDate.setDate(maxDate.getDate() + parseInt(selectedOption.dataset.advanceDays));
-          bookingDateInput.max = maxDate.toISOString().split('T')[0];
+                // Set maximum booking date
+                const maxDate = new Date();
+                maxDate.setDate(maxDate.getDate() + parseInt(selectedOption.dataset.advanceDays));
+                bookingDateInput.max = maxDate.toISOString().split('T')[0];
 
-          // Set capacity limit
-          guestsCountInput.max = selectedOption.dataset.capacity;
+                // Set capacity limit
+                guestsCountInput.max = selectedOption.dataset.capacity;
 
-          updateSummary();
-        } else {
-          facilityInfo.style.display = 'none';
-          summaryFacility.textContent = 'Not selected';
+                updateSummary();
+            } else {
+                facilityInfo.style.display = 'none';
+                summaryFacility.textContent = 'Not selected';
+            }
+        });
+
+        // Time change handlers
+        startTimeInput.addEventListener('change', function() {
+            const startTime = this.value;
+            if (startTime) {
+                // Set minimum end time to start time + 1 hour
+                const [hours, minutes] = startTime.split(':');
+                const endTimeMin = new Date();
+                endTimeMin.setHours(parseInt(hours) + 1, parseInt(minutes));
+                endTimeInput.min = endTimeMin.toTimeString().slice(0, 5);
+
+                updateSummary();
+            }
+        });
+
+        endTimeInput.addEventListener('change', function() {
+            updateSummary();
+        });
+
+        bookingDateInput.addEventListener('change', function() {
+            updateSummary();
+        });
+
+        guestsCountInput.addEventListener('change', function() {
+            updateSummary();
+        });
+
+        // Update booking summary
+        function updateSummary() {
+            // Update date and time
+            if (bookingDateInput.value && startTimeInput.value && endTimeInput.value) {
+                const date = new Date(bookingDateInput.value);
+                const startTime = startTimeInput.value;
+                const endTime = endTimeInput.value;
+
+                summaryDatetime.textContent =
+                    `${date.toLocaleDateString()} from ${startTime} to ${endTime}`;
+
+                // Calculate duration
+                const start = new Date(`2000-01-01T${startTime}`);
+                const end = new Date(`2000-01-01T${endTime}`);
+                const duration = (end - start) / (1000 * 60 * 60); // hours
+
+                summaryDuration.textContent = `${duration} hour${duration !== 1 ? 's' : ''}`;
+
+                // Calculate fee
+                const selectedOption = facilitySelect.options[facilitySelect.selectedIndex];
+                if (selectedOption.value) {
+                    const hourlyRate = parseFloat(selectedOption.dataset.fee);
+                    const totalFee = hourlyRate * duration;
+                    summaryFee.textContent = `₹${totalFee.toFixed(2)}`;
+                }
+            } else {
+                summaryDatetime.textContent = 'Not selected';
+                summaryDuration.textContent = '0 hours';
+                summaryFee.textContent = '₹0';
+            }
         }
-      });
 
-      // Time change handlers
-      startTimeInput.addEventListener('change', function() {
-        const startTime = this.value;
-        if (startTime) {
-          // Set minimum end time to start time + 1 hour
-          const [hours, minutes] = startTime.split(':');
-          const endTimeMin = new Date();
-          endTimeMin.setHours(parseInt(hours) + 1, parseInt(minutes));
-          endTimeInput.min = endTimeMin.toTimeString().slice(0, 5);
+        // Check availability functionality
+        checkAvailabilityBtn.addEventListener('click', function() {
+            const facility = facilitySelect.value;
+            const date = bookingDateInput.value;
+            const startTime = startTimeInput.value;
+            const endTime = endTimeInput.value;
 
-          updateSummary();
-        }
-      });
+            if (!facility || !date || !startTime || !endTime) {
+                alert('Please fill in all required fields before checking availability.');
+                return;
+            }
 
-      endTimeInput.addEventListener('change', function() {
+            // In a real implementation, you would make an AJAX call to check availability
+            alert('Availability check feature would be implemented here. This would check for conflicting bookings.');
+        });
+
+        // Form validation
+        form.addEventListener('submit', function(e) {
+            const facility = facilitySelect.value;
+            const date = bookingDateInput.value;
+            const startTime = startTimeInput.value;
+            const endTime = endTimeInput.value;
+            const purpose = purposeInput.value.trim();
+
+            if (!facility || !date || !startTime || !endTime || !purpose) {
+                e.preventDefault();
+                alert('Please fill in all required fields.');
+                return false;
+            }
+
+            // Validate time logic
+            if (startTime >= endTime) {
+                e.preventDefault();
+                alert('End time must be after start time.');
+                return false;
+            }
+
+            // Validate duration
+            const start = new Date(`2000-01-01T${startTime}`);
+            const end = new Date(`2000-01-01T${endTime}`);
+            const duration = (end - start) / (1000 * 60 * 60);
+
+            const selectedOption = facilitySelect.options[facilitySelect.selectedIndex];
+            const minHours = parseInt(selectedOption.dataset.minHours);
+            const maxHours = parseInt(selectedOption.dataset.maxHours);
+
+            if (duration < minHours) {
+                e.preventDefault();
+                alert(`Minimum booking duration is ${minHours} hour${minHours !== 1 ? 's' : ''}.`);
+                return false;
+            }
+
+            if (duration > maxHours) {
+                e.preventDefault();
+                alert(`Maximum booking duration is ${maxHours} hour${maxHours !== 1 ? 's' : ''}.`);
+                return false;
+            }
+
+            // Validate guest count
+            const capacity = parseInt(selectedOption.dataset.capacity);
+            const guests = parseInt(guestsCountInput.value);
+
+            if (guests > capacity) {
+                e.preventDefault();
+                alert(`Maximum capacity is ${capacity} people.`);
+                return false;
+            }
+
+            // Show loading state
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+            submitBtn.disabled = true;
+        });
+
+        // Auto-update summary on page load
         updateSummary();
-      });
-
-      bookingDateInput.addEventListener('change', function() {
-        updateSummary();
-      });
-
-      guestsCountInput.addEventListener('change', function() {
-        updateSummary();
-      });
-
-      // Update booking summary
-      function updateSummary() {
-        // Update date and time
-        if (bookingDateInput.value && startTimeInput.value && endTimeInput.value) {
-          const date = new Date(bookingDateInput.value);
-          const startTime = startTimeInput.value;
-          const endTime = endTimeInput.value;
-
-          summaryDatetime.textContent =
-            `${date.toLocaleDateString()} from ${startTime} to ${endTime}`;
-
-          // Calculate duration
-          const start = new Date(`2000-01-01T${startTime}`);
-          const end = new Date(`2000-01-01T${endTime}`);
-          const duration = (end - start) / (1000 * 60 * 60); // hours
-
-          summaryDuration.textContent = `${duration} hour${duration !== 1 ? 's' : ''}`;
-
-          // Calculate fee
-          const selectedOption = facilitySelect.options[facilitySelect.selectedIndex];
-          if (selectedOption.value) {
-            const hourlyRate = parseFloat(selectedOption.dataset.fee);
-            const totalFee = hourlyRate * duration;
-            summaryFee.textContent = `₹${totalFee.toFixed(2)}`;
-          }
-        } else {
-          summaryDatetime.textContent = 'Not selected';
-          summaryDuration.textContent = '0 hours';
-          summaryFee.textContent = '₹0';
-        }
-      }
-
-      // Check availability functionality
-      checkAvailabilityBtn.addEventListener('click', function() {
-        const facility = facilitySelect.value;
-        const date = bookingDateInput.value;
-        const startTime = startTimeInput.value;
-        const endTime = endTimeInput.value;
-
-        if (!facility || !date || !startTime || !endTime) {
-          alert('Please fill in all required fields before checking availability.');
-          return;
-        }
-
-        // In a real implementation, you would make an AJAX call to check availability
-        alert('Availability check feature would be implemented here. This would check for conflicting bookings.');
-      });
-
-      // Form validation
-      form.addEventListener('submit', function(e) {
-        const facility = facilitySelect.value;
-        const date = bookingDateInput.value;
-        const startTime = startTimeInput.value;
-        const endTime = endTimeInput.value;
-        const purpose = purposeInput.value.trim();
-
-        if (!facility || !date || !startTime || !endTime || !purpose) {
-          e.preventDefault();
-          alert('Please fill in all required fields.');
-          return false;
-        }
-
-        // Validate time logic
-        if (startTime >= endTime) {
-          e.preventDefault();
-          alert('End time must be after start time.');
-          return false;
-        }
-
-        // Validate duration
-        const start = new Date(`2000-01-01T${startTime}`);
-        const end = new Date(`2000-01-01T${endTime}`);
-        const duration = (end - start) / (1000 * 60 * 60);
-
-        const selectedOption = facilitySelect.options[facilitySelect.selectedIndex];
-        const minHours = parseInt(selectedOption.dataset.minHours);
-        const maxHours = parseInt(selectedOption.dataset.maxHours);
-
-        if (duration < minHours) {
-          e.preventDefault();
-          alert(`Minimum booking duration is ${minHours} hour${minHours !== 1 ? 's' : ''}.`);
-          return false;
-        }
-
-        if (duration > maxHours) {
-          e.preventDefault();
-          alert(`Maximum booking duration is ${maxHours} hour${maxHours !== 1 ? 's' : ''}.`);
-          return false;
-        }
-
-        // Validate guest count
-        const capacity = parseInt(selectedOption.dataset.capacity);
-        const guests = parseInt(guestsCountInput.value);
-
-        if (guests > capacity) {
-          e.preventDefault();
-          alert(`Maximum capacity is ${capacity} people.`);
-          return false;
-        }
-
-        // Show loading state
-        const submitBtn = this.querySelector('button[type="submit"]');
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
-        submitBtn.disabled = true;
-      });
-
-      // Auto-update summary on page load
-      updateSummary();
     });
-  </script>
+</script>
 {% endblock %}
