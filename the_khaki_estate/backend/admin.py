@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 
 from .models import Announcement
 from .models import AnnouncementCategory
+from .models import ApproverAssignment
 from .models import Booking
 from .models import CommonArea
 from .models import Event
@@ -284,6 +285,58 @@ class StaffInline(admin.StackedInline):
     ]
 
 
+# Inline admin for showing ApproverAssignment in CommonArea admin
+class ApproverAssignmentInline(admin.TabularInline):
+    model = ApproverAssignment
+    extra = 1
+    verbose_name = "Approver Assignment"
+    verbose_name_plural = "Approver Assignments"
+    fields = [
+        "approver",
+        "is_active",
+        "assigned_at",
+        "notes",
+    ]
+    readonly_fields = ["assigned_at"]
+    
+    def get_queryset(self, request):
+        """Optimize queryset with select_related."""
+        return super().get_queryset(request).select_related("approver", "assigned_by")
+    
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """
+        Customize the approver field to only show active residents.
+        """
+        if db_field.name == "approver":
+            # Only show active residents
+            residents = User.objects.filter(
+                user_type="resident",
+                is_active=True,
+                resident__isnull=False
+            ).select_related("resident")
+            kwargs["queryset"] = residents
+        elif db_field.name == "assigned_by":
+            # Only show staff users who can manage assignments
+            staff_users = User.objects.filter(
+                user_type="staff",
+                is_active=True,
+                staff__is_active=True,
+                staff__can_send_announcements=True,  # Staff with admin privileges
+            ).union(
+                User.objects.filter(
+                    user_type="staff",
+                    is_active=True,
+                    staff__is_active=True,
+                    staff__staff_role__in=[
+                        "facility_manager",
+                        "maintenance_supervisor",
+                    ],
+                ),
+            )
+            kwargs["queryset"] = staff_users
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+
 # Extend User admin to include both Resident and Staff profiles
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
@@ -493,11 +546,196 @@ class MaintenanceRequestAdmin(admin.ModelAdmin):
         return obj.is_overdue()
 
 
+# Enhanced CommonArea admin with approver assignment management
+@admin.register(CommonArea)
+class CommonAreaAdmin(admin.ModelAdmin):
+    """
+    Enhanced admin for CommonArea with inline approver assignment management.
+    """
+    
+    list_display = [
+        "name",
+        "capacity",
+        "booking_fee",
+        "is_active",
+        "get_current_approver",
+        "advance_booking_days",
+    ]
+    
+    list_filter = [
+        "is_active",
+        "advance_booking_days",
+        "min_booking_hours",
+        "max_booking_hours",
+    ]
+    
+    search_fields = [
+        "name",
+        "description",
+    ]
+    
+    fieldsets = (
+        (
+            "Basic Information",
+            {
+                "fields": (
+                    "name",
+                    "description",
+                    "is_active",
+                ),
+            },
+        ),
+        (
+            "Capacity & Booking",
+            {
+                "fields": (
+                    "capacity",
+                    "booking_fee",
+                    "advance_booking_days",
+                    "min_booking_hours",
+                    "max_booking_hours",
+                ),
+            },
+        ),
+        (
+            "Availability",
+            {
+                "fields": (
+                    "available_start_time",
+                    "available_end_time",
+                ),
+            },
+        ),
+    )
+    
+    inlines = [ApproverAssignmentInline]
+    
+    def get_current_approver(self, obj):
+        """
+        Display the current active approver for this common area.
+        """
+        approver = obj.get_designated_approver()
+        if approver:
+            return f"{approver.get_full_name() or approver.username} ({approver.email})"
+        return "No approver assigned"
+    get_current_approver.short_description = "Current Approver"
+    get_current_approver.admin_order_field = "approver_assignments__approver__username"
+
+
+# Enhanced ApproverAssignment admin
+@admin.register(ApproverAssignment)
+class ApproverAssignmentAdmin(admin.ModelAdmin):
+    """
+    Admin interface for managing approver assignments.
+    """
+    
+    list_display = [
+        "common_area",
+        "approver",
+        "is_active",
+        "assigned_by",
+        "assigned_at",
+    ]
+    
+    list_filter = [
+        "is_active",
+        "common_area",
+        "assigned_at",
+        "assigned_by",
+    ]
+    
+    search_fields = [
+        "common_area__name",
+        "approver__username",
+        "approver__email",
+        "approver__first_name",
+        "approver__last_name",
+        "notes",
+    ]
+    
+    readonly_fields = ["assigned_at"]
+    
+    fieldsets = (
+        (
+            "Assignment Details",
+            {
+                "fields": (
+                    "common_area",
+                    "approver",
+                    "is_active",
+                ),
+            },
+        ),
+        (
+            "Administration",
+            {
+                "fields": (
+                    "assigned_by",
+                    "assigned_at",
+                ),
+            },
+        ),
+        (
+            "Notes",
+            {
+                "fields": ("notes",),
+                "classes": ("collapse",),
+            },
+        ),
+    )
+    
+    def get_queryset(self, request):
+        """Optimize queryset with select_related."""
+        return super().get_queryset(request).select_related(
+            "common_area", "approver", "assigned_by"
+        )
+    
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """
+        Customize foreign key fields with appropriate filters.
+        """
+        if db_field.name == "approver":
+            # Only show active residents
+            residents = User.objects.filter(
+                user_type="resident",
+                is_active=True,
+                resident__isnull=False
+            ).select_related("resident")
+            kwargs["queryset"] = residents
+        elif db_field.name == "assigned_by":
+            # Only show staff users who can manage assignments
+            staff_users = User.objects.filter(
+                user_type="staff",
+                is_active=True,
+                staff__is_active=True,
+                staff__can_send_announcements=True,
+            ).union(
+                User.objects.filter(
+                    user_type="staff",
+                    is_active=True,
+                    staff__is_active=True,
+                    staff__staff_role__in=[
+                        "facility_manager",
+                        "maintenance_supervisor",
+                    ],
+                ),
+            )
+            kwargs["queryset"] = staff_users
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+    
+    def save_model(self, request, obj, form, change):
+        """
+        Set the assigned_by field to the current user if not set.
+        """
+        if not obj.assigned_by:
+            obj.assigned_by = request.user
+        super().save_model(request, obj, form, change)
+
+
 # Register other models with basic admin
 admin.site.register(AnnouncementCategory)
 admin.site.register(Announcement)
 admin.site.register(MaintenanceCategory)
-admin.site.register(CommonArea)
 admin.site.register(Booking)
 admin.site.register(Event)
 admin.site.register(MarketplaceItem)

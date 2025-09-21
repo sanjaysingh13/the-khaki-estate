@@ -2,6 +2,8 @@
 
 **IMPORTANT: This project uses `uv` as the Python package manager for all dependency management and virtual environment operations.**
 
+**TESTING: This project uses `pytest` for all testing operations instead of Django's built-in test runner.**
+
 ## 🚀 Quick Start
 
 ### Package Manager
@@ -40,16 +42,17 @@ uv add package-name
 3. [User Management System](#user-management-system)
 4. [Maintenance Staff Architecture](#maintenance-staff-architecture)
 5. [Maintenance Request Workflow](#maintenance-request-workflow)
-6. [Permission & Access Control](#permission--access-control)
-7. [Forms & Validation](#forms--validation)
-8. [Views & URL Patterns](#views--url-patterns)
-9. [Tasks & Background Processing](#tasks--background-processing)
-10. [Signals & Event Handling](#signals--event-handling)
-11. [Admin Interface](#admin-interface)
-12. [Testing Strategy](#testing-strategy)
-13. [API Design Patterns](#api-design-patterns)
-14. [Performance Considerations](#performance-considerations)
-15. [Deployment & Migration Guide](#deployment--migration-guide)
+6. [Booking Approval Workflow](#booking-approval-workflow)
+7. [Permission & Access Control](#permission--access-control)
+8. [Forms & Validation](#forms--validation)
+9. [Views & URL Patterns](#views--url-patterns)
+10. [Tasks & Background Processing](#tasks--background-processing)
+11. [Signals & Event Handling](#signals--event-handling)
+12. [Admin Interface](#admin-interface)
+13. [Testing Strategy](#testing-strategy)
+14. [API Design Patterns](#api-design-patterns)
+15. [Performance Considerations](#performance-considerations)
+16. [Deployment & Migration Guide](#deployment--migration-guide)
 
 ---
 
@@ -593,6 +596,387 @@ class MaintenanceAssignmentService:
             'satisfaction_rating': calculate_avg_satisfaction(staff_user),
         }
 ```
+
+---
+
+## 🏢 Booking Approval Workflow (v2.1)
+
+### **Designated Resident Approval System**
+
+**Key Design Principles:**
+- **Resident-Based Approvals**: Designated residents (not staff) approve bookings for their assigned areas
+- **Admin-Managed Assignments**: Approver assignments managed through Django admin interface
+- **Notification-Driven**: Real-time notifications for approval requests and status changes
+- **Audit Trail**: Complete tracking of approval decisions and timestamps
+
+### **Workflow Participants**
+
+1. **Residents**: Create booking requests for common areas
+2. **Designated Approvers**: Specific residents assigned to approve bookings for particular areas
+3. **Committee Members**: Can view all bookings and perform status updates
+4. **Administrators**: Manage approver assignments through Django admin
+
+### **Booking Model Enhancements**
+
+```python
+class Booking(models.Model):
+    """
+    Enhanced booking model with designated resident approval workflow.
+    """
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending Approval'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('confirmed', 'Confirmed'),
+        ('cancelled', 'Cancelled'),
+        ('completed', 'Completed'),
+    ]
+    
+    # Core booking fields
+    booking_number = CharField(max_length=20, unique=True)
+    common_area = ForeignKey(CommonArea, on_delete=models.CASCADE)
+    resident = ForeignKey(User, on_delete=models.CASCADE, related_name='bookings')
+    purpose = CharField(max_length=200)
+    booking_date = DateField()
+    start_time = TimeField()
+    end_time = TimeField()
+    
+    # Approval workflow fields
+    designated_approver = ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='approvals_to_review',
+        help_text="The resident designated to approve this booking"
+    )
+    approved_by = ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='approved_bookings'
+    )
+    approved_at = DateTimeField(null=True, blank=True)
+    rejection_reason = TextField(blank=True)
+    
+    # Status tracking
+    status = CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    status_changed_at = DateTimeField(auto_now=True)
+    status_changed_by = ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Business logic methods
+    def get_designated_approver(self):
+        """Get the designated approver from CommonArea's ApproverAssignment"""
+        return self.common_area.get_designated_approver()
+    
+    def can_be_approved_by(self, user):
+        """Check if user can approve this booking"""
+        return (
+            self.status == 'pending' and
+            self.designated_approver == user and
+            user.user_type == 'resident'
+        )
+    
+    def approve_booking(self, approver, rejection_reason=None):
+        """Approve or reject the booking"""
+        if rejection_reason:
+            self.status = 'rejected'
+            self.rejection_reason = rejection_reason
+        else:
+            self.status = 'approved'
+        
+        self.approved_by = approver
+        self.approved_at = timezone.now()
+        self.status_changed_by = approver
+        self.save()
+```
+
+### **ApproverAssignment Model**
+
+```python
+class ApproverAssignment(models.Model):
+    """
+    Manages designated approvers for common areas.
+    Allows administrators to assign specific residents as approvers
+    for different common areas through Django admin interface.
+    """
+    
+    common_area = ForeignKey(
+        CommonArea,
+        on_delete=models.CASCADE,
+        related_name='approver_assignments'
+    )
+    
+    approver = ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='approver_assignments',
+        limit_choices_to={'user_type': 'resident', 'is_active': True}
+    )
+    
+    is_active = BooleanField(default=True)
+    assigned_by = ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    assigned_at = DateTimeField(auto_now_add=True)
+    notes = TextField(blank=True)
+    
+    class Meta:
+        unique_together = ['common_area', 'approver']
+    
+    def save(self, *args, **kwargs):
+        """Ensure only one active assignment per common area"""
+        if self.is_active:
+            ApproverAssignment.objects.filter(
+                common_area=self.common_area,
+                is_active=True
+            ).exclude(pk=self.pk).update(is_active=False)
+        super().save(*args, **kwargs)
+```
+
+### **CommonArea Model Enhancement**
+
+```python
+class CommonArea(models.Model):
+    # ... existing fields ...
+    
+    def get_designated_approver(self):
+        """
+        Get the designated approver for this common area.
+        Returns the User object of the active approver, or None if not found.
+        """
+        try:
+            assignment = ApproverAssignment.objects.get(
+                common_area=self,
+                is_active=True
+            )
+            return assignment.approver if assignment.approver.is_active else None
+        except ApproverAssignment.DoesNotExist:
+            return None
+```
+
+### **Notification Types for Booking Workflow**
+
+```python
+BOOKING_NOTIFICATION_TYPES = [
+    {
+        'name': 'booking_pending_approval',
+        'title_template': 'New Booking Request: {booking_number}',
+        'message_template': 'Booking request for {common_area} on {booking_date} requires your approval.',
+        'channels': ['in_app', 'email'],
+        'priority': 'high',
+    },
+    {
+        'name': 'booking_approved',
+        'title_template': 'Booking Approved: {booking_number}',
+        'message_template': 'Your booking for {common_area} on {booking_date} has been approved.',
+        'channels': ['in_app', 'email'],
+        'priority': 'medium',
+    },
+    {
+        'name': 'booking_rejected',
+        'title_template': 'Booking Rejected: {booking_number}',
+        'message_template': 'Your booking for {common_area} on {booking_date} was rejected. Reason: {rejection_reason}',
+        'channels': ['in_app', 'email'],
+        'priority': 'high',
+    },
+    {
+        'name': 'booking_confirmed',
+        'title_template': 'Booking Confirmed: {booking_number}',
+        'message_template': 'Your booking for {common_area} on {booking_date} has been confirmed.',
+        'channels': ['in_app', 'email'],
+        'priority': 'medium',
+    },
+    {
+        'name': 'booking_cancelled',
+        'title_template': 'Booking Cancelled: {booking_number}',
+        'message_template': 'Your booking for {common_area} on {booking_date} has been cancelled.',
+        'channels': ['in_app', 'email'],
+        'priority': 'medium',
+    },
+]
+```
+
+### **Signal Handlers for Booking Workflow**
+
+```python
+@receiver(post_save, sender=Booking)
+def booking_workflow_handler(sender, instance, created, **kwargs):
+    """
+    Handle booking creation and status change notifications.
+    """
+    if created:
+        _handle_new_booking(instance)
+    else:
+        _handle_booking_status_change(instance)
+
+def _handle_new_booking(booking):
+    """Handle new booking creation workflow"""
+    # Set designated approver based on common area
+    approver = booking.set_designated_approver()
+    
+    # Save the booking to persist the designated_approver field
+    if approver:
+        booking.save()
+    
+    if approver:
+        # Notify designated approver about new booking request
+        NotificationService.create_notification(
+            recipient=approver,
+            notification_type_name="booking_pending_approval",
+            title=f"New Booking Request: {booking.booking_number}",
+            message=f"Booking request for {booking.common_area.name} on {booking.booking_date} requires your approval.",
+            context_data={
+                'booking_id': booking.id,
+                'booking_number': booking.booking_number,
+                'common_area': booking.common_area.name,
+                'booking_date': booking.booking_date.strftime('%Y-%m-%d'),
+                'start_time': booking.start_time.strftime('%H:%M'),
+                'end_time': booking.end_time.strftime('%H:%M'),
+                'purpose': booking.purpose,
+                'resident': booking.resident.get_full_name(),
+            }
+        )
+
+def _handle_booking_status_change(booking):
+    """Handle booking status change notifications"""
+    if booking.status == 'approved':
+        _notify_booking_approved(booking)
+    elif booking.status == 'rejected':
+        _notify_booking_rejected(booking)
+    elif booking.status == 'confirmed':
+        _notify_booking_confirmed(booking)
+    elif booking.status == 'cancelled':
+        _notify_booking_cancelled(booking)
+```
+
+### **Views for Booking Approval**
+
+```python
+def approve_booking(request, booking_id):
+    """
+    Approve or reject a booking - designated resident approvers only
+    """
+    booking = get_object_or_404(Booking, id=booking_id)
+    
+    # Check if user can approve this booking
+    if not booking.can_be_approved_by(request.user):
+        return JsonResponse({
+            "status": "error", 
+            "message": "You are not authorized to approve this booking"
+        })
+    
+    action = request.POST.get("action")  # 'approve' or 'reject'
+    rejection_reason = request.POST.get("rejection_reason", "").strip()
+    
+    if action not in ["approve", "reject"]:
+        return JsonResponse({
+            "status": "error",
+            "message": "Invalid action. Must be 'approve' or 'reject'."
+        })
+    
+    # Validate rejection reason for rejections
+    if action == "reject" and not rejection_reason:
+        return JsonResponse({
+            "status": "error",
+            "message": "Rejection reason is required."
+        })
+    
+    # Approve or reject the booking
+    booking.approve_booking(request.user, rejection_reason if action == "reject" else None)
+    
+    # Return success response
+    status_text = "approved" if action == "approve" else "rejected"
+    return JsonResponse({
+        "status": "success",
+        "message": f"Booking {booking.booking_number} has been {status_text} successfully"
+    })
+```
+
+### **Django Admin Interface**
+
+```python
+class ApproverAssignmentInline(admin.TabularInline):
+    """Inline admin for managing approver assignments within CommonArea admin"""
+    model = ApproverAssignment
+    extra = 1
+    fields = ["approver", "is_active", "assigned_at", "notes"]
+    readonly_fields = ["assigned_at"]
+    
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "approver":
+            # Only show active residents
+            residents = User.objects.filter(
+                user_type="resident",
+                is_active=True,
+                resident__isnull=False
+            )
+            kwargs["queryset"] = residents
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+@admin.register(CommonArea)
+class CommonAreaAdmin(admin.ModelAdmin):
+    """Enhanced admin for CommonArea with inline approver assignment management"""
+    list_display = ["name", "capacity", "booking_fee", "is_active", "get_current_approver"]
+    inlines = [ApproverAssignmentInline]
+    
+    def get_current_approver(self, obj):
+        """Display the current active approver for this common area"""
+        approver = obj.get_designated_approver()
+        if approver:
+            return f"{approver.get_full_name() or approver.username} ({approver.email})"
+        return "No approver assigned"
+    get_current_approver.short_description = "Current Approver"
+```
+
+### **Frontend Implementation**
+
+**Booking Detail Template Features:**
+- Approval interface for designated approvers
+- Status badges with color coding
+- Modal dialogs for approval/rejection actions
+- Real-time status updates via AJAX
+- Proper JavaScript error handling
+
+**Key Template Features:**
+```html
+<!-- Approval Actions Section -->
+{% if can_approve and booking.status == 'pending' %}
+<div class="approval-actions">
+    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#approveModal">
+        <i class="fas fa-check me-2"></i>Approve Booking
+    </button>
+    <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">
+        <i class="fas fa-times me-2"></i>Reject Booking
+    </button>
+</div>
+{% endif %}
+
+<!-- JavaScript for AJAX Approval -->
+<script>
+const approveUrl = '{% url "backend:approve_booking" booking.id %}';
+fetch(approveUrl, {
+    method: 'POST',
+    body: formData,
+    headers: {
+        'X-CSRFToken': csrfToken.value
+    }
+})
+</script>
+```
+
+### **Testing Strategy**
+
+**Test Coverage Includes:**
+- Model business logic (`can_be_approved_by`, `approve_booking`)
+- Signal handlers and notification creation
+- View permissions and approval workflow
+- Admin interface functionality
+- Frontend JavaScript interactions
+
+**Key Test Files:**
+- `test_booking_approval_workflow.py`: Core workflow testing
+- `test_admin_approver_management.py`: Admin interface testing
 
 ---
 

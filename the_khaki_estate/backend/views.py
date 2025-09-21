@@ -824,9 +824,16 @@ def booking_list(request):
     if status_filter:
         bookings = bookings.filter(status=status_filter)
 
-    # Filter by user (for residents)
-    if not is_committee_member(request.user):
-        bookings = bookings.filter(resident=request.user)
+    # Filter by user permissions
+    if is_committee_member(request.user):
+        # Committee members can see all bookings
+        pass
+    else:
+        # Regular users see their own bookings or bookings they need to approve
+        bookings = bookings.filter(
+            Q(resident=request.user) |  # Their own bookings
+            Q(designated_approver=request.user)  # Bookings they need to approve
+        )
 
     # Pagination
     paginator = Paginator(bookings, 20)
@@ -836,12 +843,21 @@ def booking_list(request):
     # Get filter options
     common_areas = CommonArea.objects.filter(is_active=True)
 
+    # Get pending bookings for designated approvers
+    pending_approvals = []
+    if not is_committee_member(request.user):
+        pending_approvals = Booking.objects.filter(
+            designated_approver=request.user,
+            status="pending"
+        ).count()
+
     context = {
         "bookings": page_obj,
         "common_areas": common_areas,
         "current_area": area_filter,
         "current_status": status_filter,
         "is_committee": is_committee_member(request.user),
+        "pending_approvals": pending_approvals,
     }
 
     return render(request, "backend/bookings/list.html", context)
@@ -928,6 +944,7 @@ def booking_create(request):
             total_fee = float(common_area.booking_fee) * hours
 
             # Create booking (booking number auto-generated in save method)
+            # The designated approver will be set automatically via the signal handler
             booking = Booking.objects.create(
                 common_area=common_area,
                 resident=request.user,
@@ -937,15 +954,21 @@ def booking_create(request):
                 purpose=purpose,
                 guests_count=guests_count,
                 total_fee=total_fee,
-                status="pending",  # Requires committee approval if fee > 0
+                status="pending",  # Requires designated resident approval
             )
 
-            # Send notification to committee for approval
-            # TODO: Implement notification sending
+            # The signal handler will automatically:
+            # 1. Set the designated approver based on common area
+            # 2. Send notification to the designated approver
 
+            # Get the designated approver for user feedback
+            approver = booking.get_designated_approver()
+            approver_name = approver.get_full_name() if approver else "designated approver"
+            
             messages.success(
                 request,
-                f"Booking {booking.booking_number} created successfully!",
+                f"Booking {booking.booking_number} created successfully! "
+                f"It has been sent to {approver_name} for approval.",
             )
             return redirect("backend:booking_detail", booking_id=booking.id)
 
@@ -972,14 +995,28 @@ def booking_detail(request, booking_id):
     """
     booking = get_object_or_404(Booking, id=booking_id)
 
-    # Check permissions
-    if not is_committee_member(request.user) and booking.resident != request.user:
+    # Check permissions - allow designated approver, owner, and committee members
+    can_view = (
+        booking.resident == request.user or  # Booking owner
+        booking.designated_approver == request.user or  # Designated approver
+        is_committee_member(request.user)  # Committee members
+    )
+    
+    if not can_view:
         messages.error(request, "You do not have permission to view this booking.")
         return redirect("backend:booking_list")
+
+    # Check if user can approve this booking
+    can_approve = booking.can_be_approved_by(request.user)
+    
+    # Check if user is the designated approver
+    is_designated_approver = booking.designated_approver == request.user
 
     context = {
         "booking": booking,
         "can_manage": can_manage_maintenance(request.user),
+        "can_approve": can_approve,
+        "is_designated_approver": is_designated_approver,
         "is_owner": booking.resident == request.user,
     }
 
@@ -988,31 +1025,126 @@ def booking_detail(request, booking_id):
 
 @login_required
 @require_http_methods(["POST"])
-def update_booking_status(request, booking_id):
+def approve_booking(request, booking_id):
     """
-    Update booking status - committee members only
+    Approve or reject a booking - designated resident approvers only
+    
+    This view handles the new approval workflow where designated residents
+    (instead of facility managers) approve bookings for their assigned areas.
     """
     booking = get_object_or_404(Booking, id=booking_id)
-
-    if not can_manage_maintenance(request.user):
-        return JsonResponse({"status": "error", "message": "Permission denied"})
-
-    new_status = request.POST.get("status")
-
-    if new_status not in [choice[0] for choice in Booking.STATUS_CHOICES]:
-        return JsonResponse({"status": "error", "message": "Invalid status"})
-
+    
+    # Check if user can approve this booking
+    if not booking.can_be_approved_by(request.user):
+        return JsonResponse({
+            "status": "error", 
+            "message": "You are not authorized to approve this booking"
+        })
+    
+    action = request.POST.get("action")  # 'approve' or 'reject'
+    rejection_reason = request.POST.get("rejection_reason", "").strip()
+    
+    if action not in ["approve", "reject"]:
+        return JsonResponse({
+            "status": "error", 
+            "message": "Invalid action. Must be 'approve' or 'reject'"
+        })
+    
+    # Validate rejection reason if rejecting
+    if action == "reject" and not rejection_reason:
+        return JsonResponse({
+            "status": "error", 
+            "message": "Rejection reason is required when rejecting a booking"
+        })
+    
     try:
-        booking.status = new_status
-        booking.save()
-
-        # Send notification to resident
-        # TODO: Implement notification sending
-
-        return JsonResponse(
-            {"status": "success", "message": "Booking status updated successfully"},
+        # Use the model's approval method for proper workflow
+        approved = (action == "approve")
+        booking.approve_booking(
+            approver=request.user,
+            approved=approved,
+            rejection_reason=rejection_reason if not approved else None
         )
+        
+        # The signal handler will automatically send notifications
+        
+        action_message = "approved" if approved else "rejected"
+        return JsonResponse({
+            "status": "success", 
+            "message": f"Booking {booking.booking_number} has been {action_message} successfully"
+        })
+        
+    except ValueError as e:
+        return JsonResponse({"status": "error", "message": str(e)})
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": f"An error occurred: {str(e)}"})
 
+
+@login_required
+@require_http_methods(["POST"])
+def update_booking_status(request, booking_id):
+    """
+    Update booking status - committee members and designated approvers
+    
+    This view handles general status updates (confirmed, cancelled, completed)
+    for users who have permission to manage bookings.
+    """
+    booking = get_object_or_404(Booking, id=booking_id)
+    
+    # Check permissions - committee members or designated approvers
+    can_manage = (
+        is_committee_member(request.user) or 
+        booking.designated_approver == request.user or
+        can_manage_maintenance(request.user)
+    )
+    
+    if not can_manage:
+        return JsonResponse({
+            "status": "error", 
+            "message": "Permission denied"
+        })
+    
+    new_status = request.POST.get("status")
+    
+    if new_status not in [choice[0] for choice in Booking.STATUS_CHOICES]:
+        return JsonResponse({
+            "status": "error", 
+            "message": "Invalid status"
+        })
+    
+    # Validate status transitions
+    valid_transitions = {
+        'pending': ['approved', 'rejected', 'cancelled'],
+        'approved': ['confirmed', 'cancelled'],
+        'confirmed': ['completed', 'cancelled'],
+        'rejected': ['cancelled'],
+        'cancelled': [],  # Terminal state
+        'completed': [],  # Terminal state
+    }
+    
+    if new_status not in valid_transitions.get(booking.status, []):
+        return JsonResponse({
+            "status": "error", 
+            "message": f"Cannot transition from {booking.status} to {new_status}"
+        })
+    
+    try:
+        # Update status with audit trail
+        from django.utils import timezone
+        
+        old_status = booking.status
+        booking.status = new_status
+        booking.status_changed_at = timezone.now()
+        booking.status_changed_by = request.user
+        booking.save()
+        
+        # The signal handler will automatically send notifications
+        
+        return JsonResponse({
+            "status": "success", 
+            "message": f"Booking status updated from {old_status} to {new_status} successfully"
+        })
+        
     except (ValueError, IntegrityError) as e:
         return JsonResponse({"status": "error", "message": str(e)})
 

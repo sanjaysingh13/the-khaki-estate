@@ -586,20 +586,114 @@ class CommonArea(models.Model):
     def __str__(self):
         return self.name
 
+    def get_designated_approver(self):
+        """
+        Get the designated approver for this common area.
+        
+        Returns:
+            User: The designated resident approver, or None if not found
+        """
+        try:
+            assignment = ApproverAssignment.objects.get(
+                common_area=self,
+                is_active=True
+            )
+            return assignment.approver if assignment.approver.is_active else None
+        except ApproverAssignment.DoesNotExist:
+            return None
+
+
+class ApproverAssignment(models.Model):
+    """
+    Model to manage designated approvers for common areas.
+    
+    This allows administrators to assign specific residents as approvers
+    for different common areas through the Django admin interface.
+    """
+    
+    common_area = models.ForeignKey(
+        CommonArea,
+        on_delete=models.CASCADE,
+        related_name='approver_assignments',
+        help_text="The common area for which this resident is designated as approver"
+    )
+    
+    approver = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='approver_assignments',
+        limit_choices_to={'user_type': 'resident', 'is_active': True},
+        help_text="The resident designated to approve bookings for this common area"
+    )
+    
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether this assignment is currently active"
+    )
+    
+    assigned_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_approvers',
+        help_text="Admin user who assigned this approver"
+    )
+    
+    assigned_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this assignment was created"
+    )
+    
+    notes = models.TextField(
+        blank=True,
+        help_text="Optional notes about this assignment"
+    )
+
+    class Meta:
+        unique_together = ['common_area', 'approver']
+        verbose_name = "Approver Assignment"
+        verbose_name_plural = "Approver Assignments"
+        ordering = ['common_area__name', 'approver__first_name']
+
+    def __str__(self):
+        return f"{self.common_area.name} → {self.approver.get_full_name() or self.approver.username}"
+
+    def save(self, *args, **kwargs):
+        """
+        Override save to ensure only one active assignment per common area.
+        """
+        if self.is_active:
+            # Deactivate any existing active assignments for this common area
+            ApproverAssignment.objects.filter(
+                common_area=self.common_area,
+                is_active=True
+            ).exclude(pk=self.pk).update(is_active=False)
+        
+        super().save(*args, **kwargs)
+
 
 class Booking(models.Model):
-    """Bookings for common areas"""
+    """
+    Bookings for common areas with designated resident approval workflow.
+    
+    Similar to maintenance requests, bookings now flow through designated residents
+    instead of facility managers. Each common area has a designated resident who
+    handles approvals and notifications.
+    """
 
     STATUS_CHOICES = [
         ("pending", "Pending"),
+        ("approved", "Approved"),        # NEW: Approved by designated resident
         ("confirmed", "Confirmed"),
         ("cancelled", "Cancelled"),
         ("completed", "Completed"),
+        ("rejected", "Rejected"),        # NEW: Rejected by designated resident
     ]
 
     booking_number = models.CharField(max_length=20, unique=True)
     common_area = models.ForeignKey(CommonArea, on_delete=models.CASCADE)
-    resident = models.ForeignKey(User, on_delete=models.CASCADE)
+    resident = models.ForeignKey(User, on_delete=models.CASCADE, related_name="bookings")
 
     # Booking details
     booking_date = models.DateField()
@@ -608,8 +702,43 @@ class Booking(models.Model):
     purpose = models.CharField(max_length=200)
     guests_count = models.IntegerField(default=0)
 
-    # Status and payment
+    # Enhanced approval workflow fields
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
+    
+    # Designated resident who approves this booking (based on common area)
+    designated_approver = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name="approved_bookings",
+        help_text="Resident designated to approve bookings for this common area"
+    )
+    
+    # Approval tracking
+    approved_by = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name="bookings_approved",
+        help_text="Resident who approved this booking"
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True, help_text="Reason for rejection if applicable")
+    
+    # Status change timestamps for audit trail
+    status_changed_at = models.DateTimeField(null=True, blank=True)
+    status_changed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="bookings_status_changed",
+        help_text="User who last changed the status"
+    )
+
+    # Status and payment
     total_fee = models.DecimalField(max_digits=8, decimal_places=2, default=0)
     is_paid = models.BooleanField(default=False)
 
@@ -639,6 +768,143 @@ class Booking(models.Model):
 
     def __str__(self):
         return f"{self.booking_number} - {self.common_area.name}"
+
+    def get_designated_approver(self):
+        """
+        Get the designated resident who should approve bookings for this common area.
+        
+        This method now uses the ApproverAssignment model which can be managed
+        through the Django admin interface.
+        
+        Returns:
+            User: The designated resident approver, or None if not found
+        """
+        # Use the CommonArea's get_designated_approver method which queries ApproverAssignment
+        return self.common_area.get_designated_approver()
+
+    def set_designated_approver(self):
+        """
+        Set the designated approver for this booking based on common area.
+        
+        This method is called during booking creation to automatically assign
+        the appropriate resident as the approver.
+        """
+        approver = self.get_designated_approver()
+        if approver:
+            self.designated_approver = approver
+        return approver
+
+    def can_be_approved_by(self, user):
+        """
+        Check if a user can approve this booking.
+        
+        Args:
+            user: The user attempting to approve
+            
+        Returns:
+            bool: True if user can approve, False otherwise
+        """
+        # Only the designated approver can approve
+        return (
+            self.designated_approver == user and
+            user.is_active and
+            user.user_type == 'resident' and
+            self.status == 'pending'
+        )
+
+    def approve_booking(self, approver, approved=True, rejection_reason=None):
+        """
+        Approve or reject a booking with proper workflow.
+        
+        Args:
+            approver: User approving/rejecting the booking
+            approved: True for approval, False for rejection
+            rejection_reason: Reason for rejection (required if approved=False)
+        """
+        from django.utils import timezone
+        
+        if not self.can_be_approved_by(approver):
+            raise ValueError("User cannot approve this booking")
+        
+        # Update status and tracking fields
+        if approved:
+            self.status = 'approved'
+            self.approved_by = approver
+            self.approved_at = timezone.now()
+            self.rejection_reason = ''
+        else:
+            self.status = 'rejected'
+            self.approved_by = approver
+            self.approved_at = timezone.now()
+            self.rejection_reason = rejection_reason or 'No reason provided'
+        
+        # Update audit trail
+        self.status_changed_at = timezone.now()
+        self.status_changed_by = approver
+        
+        self.save()
+
+    @property
+    def booking_duration_hours(self):
+        """
+        Calculate the duration of the booking in hours.
+        
+        Returns:
+            float: Duration in hours
+        """
+        from datetime import datetime, timedelta
+        
+        start_datetime = datetime.combine(self.booking_date, self.start_time)
+        end_datetime = datetime.combine(self.booking_date, self.end_time)
+        
+        # Handle overnight bookings (end time next day)
+        if end_datetime <= start_datetime:
+            end_datetime += timedelta(days=1)
+        
+        duration = end_datetime - start_datetime
+        return duration.total_seconds() / 3600
+
+    def get_booking_duration_hours(self):
+        """
+        Calculate the duration of the booking in hours.
+        
+        Returns:
+            float: Duration in hours
+        """
+        return self.booking_duration_hours
+
+    def is_overdue(self):
+        """
+        Check if booking is overdue (past booking date and not completed).
+        
+        Returns:
+            bool: True if overdue, False otherwise
+        """
+        from django.utils import timezone
+        
+        if self.status in ['completed', 'cancelled', 'rejected']:
+            return False
+        
+        # Check if booking date has passed
+        today = timezone.now().date()
+        return self.booking_date < today
+
+    def get_status_display_color(self):
+        """
+        Get Bootstrap color class for status display.
+        
+        Returns:
+            str: Bootstrap color class
+        """
+        status_colors = {
+            'pending': 'warning',
+            'approved': 'info',
+            'confirmed': 'success',
+            'cancelled': 'secondary',
+            'completed': 'primary',
+            'rejected': 'danger',
+        }
+        return status_colors.get(self.status, 'secondary')
 
     class Meta:
         ordering = ["-booking_date", "-start_time"]
