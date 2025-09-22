@@ -1,5 +1,4 @@
-from .models import Notification
-from .models import NotificationType
+from .models import Notification, NotificationType, Resident
 from .tasks import send_notification_task
 
 

@@ -26,8 +26,7 @@
                 Flat {{ user.resident.flat_number }}
                 {% if user.resident.block %}- Block {{ user.resident.block }}{% endif %}
               {% elif user.user_type == 'staff' and user.staff %}
-                {{ user.staff.get_staff_role_display
-                }}
+                {{ user.staff.get_staff_role_display}}
                 {% if user.staff.department %}- {{ user.staff.department }}{% endif %}
               {% else %}
                 {{ user.get_user_type_display }}

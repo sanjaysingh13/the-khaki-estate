@@ -5,18 +5,6 @@
 {% block title %}{{ announcement.title }} - Announcement Details{% endblock %}
 {% block content %}
   <div class="container-fluid">
-    <!-- Breadcrumb Navigation -->
-    <nav aria-label="breadcrumb" class="mb-4">
-      <ol class="breadcrumb">
-        <li class="breadcrumb-item">
-          <a href="{% url 'backend:dashboard' %}">Dashboard</a>
-        </li>
-        <li class="breadcrumb-item">
-          <a href="{% url 'backend:announcement_list' %}">Announcements</a>
-        </li>
-        <li class="breadcrumb-item active" aria-current="page">{{ announcement.title|truncatewords:5 }}</li>
-      </ol>
-    </nav>
     <div class="row">
       <!-- Main Content -->
       <div class="col-lg-8">
@@ -435,4 +423,4 @@
       }
     });
   </script>
-{% endblock %}
+{% endblock content %}

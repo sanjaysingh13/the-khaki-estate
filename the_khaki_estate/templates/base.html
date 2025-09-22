@@ -6,6 +6,9 @@
     <meta charset="utf-8" />
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
     <title>
+      {% if request.user.is_authenticated %}
+        {{ request.user.get_full_name|default:request.user.username }}: 
+      {% endif %}
       {% block title %}
         The Khaki Estate
       {% endblock title %}
