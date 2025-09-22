@@ -14,9 +14,9 @@ class Resident(models.Model):
         ("family", "Family Member"),
     ]
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="resident")
-    flat_number = models.CharField(max_length=4)
-    block = models.CharField(max_length=2, blank=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="resident", null=True, blank=True)
+    flat_number = models.CharField(max_length=10)  # Keep original format (e.g., A-101, C1-201)
+    block = models.CharField(max_length=5, blank=True)
     phone_number = models.CharField(max_length=13)
     alternate_phone = models.CharField(max_length=13, blank=True)
     resident_type = models.CharField(
@@ -29,13 +29,20 @@ class Resident(models.Model):
     emergency_contact_name = models.CharField(max_length=100, blank=True)
     emergency_contact_phone = models.CharField(max_length=13, blank=True)
 
+    # Owner data fields for CSV-created residents (before user association)
+    owner_name = models.CharField(max_length=255, blank=True, help_text="Owner name from CSV data")
+    owner_email = models.EmailField(blank=True, help_text="Owner email from CSV data")
+
     # Notification preferences
     email_notifications = models.BooleanField(default=True)
     sms_notifications = models.BooleanField(default=False)
     urgent_only = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.user.get_full_name()} - {self.flat_number}"
+        if self.user:
+            return f"{self.user.get_full_name()} - {self.flat_number}"
+        else:
+            return f"{self.owner_name or 'Unknown'} - {self.flat_number}"
 
 
 class Staff(models.Model):

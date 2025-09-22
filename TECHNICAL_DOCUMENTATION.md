@@ -29,8 +29,8 @@ uv sync
 uv add package-name
 ```
 
-**Version**: 2.1
-**Last Updated**: September 2025
+**Version**: 2.3
+**Last Updated**: 22nd September, 2025
 **Target Audience**: Developers, System Architects, Technical Teams
 
 ---
@@ -38,21 +38,22 @@ uv add package-name
 ## 📋 Table of Contents
 
 1. [System Architecture Overview](#system-architecture-overview)
-2. [Database Schema & Models](#database-schema--models)
-3. [User Management System](#user-management-system)
-4. [Maintenance Staff Architecture](#maintenance-staff-architecture)
-5. [Maintenance Request Workflow](#maintenance-request-workflow)
-6. [Booking Approval Workflow](#booking-approval-workflow)
-7. [Permission & Access Control](#permission--access-control)
-8. [Forms & Validation](#forms--validation)
-9. [Views & URL Patterns](#views--url-patterns)
-10. [Tasks & Background Processing](#tasks--background-processing)
-11. [Signals & Event Handling](#signals--event-handling)
-12. [Admin Interface](#admin-interface)
-13. [Testing Strategy](#testing-strategy)
-14. [API Design Patterns](#api-design-patterns)
-15. [Performance Considerations](#performance-considerations)
-16. [Deployment & Migration Guide](#deployment--migration-guide)
+2. [Enhanced Owner Signup Workflow](#enhanced-owner-signup-workflow-v23)
+3. [Database Schema & Models](#database-schema--models)
+4. [User Management System](#user-management-system)
+5. [Maintenance Staff Architecture](#maintenance-staff-architecture)
+6. [Maintenance Request Workflow](#maintenance-request-workflow)
+7. [Booking Approval Workflow](#booking-approval-workflow)
+8. [Permission & Access Control](#permission--access-control)
+9. [Forms & Validation](#forms--validation)
+10. [Views & URL Patterns](#views--url-patterns)
+11. [Tasks & Background Processing](#tasks--background-processing)
+12. [Signals & Event Handling](#signals--event-handling)
+13. [Admin Interface](#admin-interface)
+14. [Testing Strategy](#testing-strategy)
+15. [API Design Patterns](#api-design-patterns)
+16. [Performance Considerations](#performance-considerations)
+17. [Deployment & Migration Guide](#deployment--migration-guide)
 
 ---
 
@@ -87,6 +88,537 @@ uv add package-name
 │  ├── StaffAdmin (NEW)  │  ├── maintenance_signals.py        │
 │  └── Enhanced Models   │  └── celery_app.py                 │
 └─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 👤 Enhanced Owner Signup Workflow (v2.3)
+
+### **CSV-Based Owner Registration System**
+
+**Key Design Principles:**
+- **Pre-populated Owner Data**: Owners are imported from CSV before user account creation
+- **Dynamic Form Behavior**: Signup form adapts based on user type and resident type selections
+- **Auto-population**: Owner details are automatically filled when flat number is selected
+- **Seamless Linking**: New user accounts are linked to existing owner records from CSV
+
+### **CSV Data Import Process**
+
+```python
+# Management Command: populate_residents_from_csv
+class Command(BaseCommand):
+    """
+    Import owner data from CSV file and create Resident records without User accounts.
+    
+    Workflow:
+    1. Parse CSV with interleaved block headers
+    2. Clean and normalize data (names, phone numbers, flat numbers)
+    3. Create Resident records with user=None
+    4. Store owner_name and owner_email for later linking
+    """
+    
+    def _process_resident_data(self, ser_no, flat_number, name, phone, email, block):
+        """Clean and normalize resident data from CSV."""
+        # Clean name - remove appellations (SHRI, MS) and normalize case
+        cleaned_name = self._clean_name(name)
+        
+        # Format phone number - add +91 prefix
+        formatted_phone = self._format_phone_number(phone)
+        
+        # Extract block identifier from "BLOCK-A" format
+        block_clean = block.replace('BLOCK', '').replace('-', '').replace(' ', '').strip()
+        
+        return {
+            'flat_number': flat_number,  # Keep original format (A-101, C1-201)
+            'full_name': cleaned_name,
+            'phone_number': formatted_phone,
+            'email': email.lower(),
+            'block': block_clean,
+        }
+    
+    def _create_residents(self, residents_data, dry_run=False):
+        """Create Resident records without User accounts."""
+        for resident_data in residents_data:
+            Resident.objects.create(
+                user=None,  # No user initially - will be linked during signup
+                flat_number=resident_data['flat_number'],
+                block=resident_data['block'],
+                phone_number=resident_data['phone_number'],
+                alternate_phone='',
+                resident_type='owner',
+                is_committee_member=False,
+                move_in_date=None,
+                emergency_contact_name='',
+                emergency_contact_phone='',
+                email_notifications=True,
+                sms_notifications=False,
+                urgent_only=False,
+                # Store owner data for API access
+                owner_name=resident_data['full_name'],
+                owner_email=resident_data['email'],
+            )
+```
+
+### **Enhanced Resident Model**
+
+```python
+class Resident(models.Model):
+    """
+    Enhanced Resident model supporting CSV-imported owners and dynamic user linking.
+    """
+    
+    # Core relationship - nullable to support CSV-imported owners
+    user = models.OneToOneField(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name="resident", 
+        null=True, 
+        blank=True
+    )
+    
+    # Property details
+    flat_number = models.CharField(max_length=10)  # Supports A-101, C1-201 formats
+    block = models.CharField(max_length=5, blank=True)  # Supports A, C1 formats
+    
+    # Contact information
+    phone_number = models.CharField(max_length=13)
+    alternate_phone = models.CharField(max_length=13, blank=True)
+    
+    # Owner data fields for CSV-created residents (before user association)
+    owner_name = models.CharField(
+        max_length=255, 
+        blank=True, 
+        help_text="Owner name from CSV data"
+    )
+    owner_email = models.EmailField(
+        blank=True, 
+        help_text="Owner email from CSV data"
+    )
+    
+    # Resident classification
+    resident_type = models.CharField(
+        max_length=10,
+        choices=RESIDENT_TYPES,
+        default="owner",
+    )
+    
+    # Additional fields
+    is_committee_member = models.BooleanField(default=False)
+    move_in_date = models.DateField(null=True, blank=True)
+    emergency_contact_name = models.CharField(max_length=100, blank=True)
+    emergency_contact_phone = models.CharField(max_length=13, blank=True)
+    
+    # Notification preferences
+    email_notifications = models.BooleanField(default=True)
+    sms_notifications = models.BooleanField(default=False)
+    urgent_only = models.BooleanField(default=False)
+    
+    def __str__(self):
+        if self.user:
+            return f"{self.user.get_full_name()} - {self.flat_number}"
+        else:
+            return f"{self.owner_name or 'Unknown'} - {self.flat_number}"
+```
+
+### **Dynamic Signup Form Architecture**
+
+```python
+class NewUserSignupForm(SignupForm):
+    """
+    Enhanced signup form with dynamic field behavior for owner registration.
+    
+    Workflow:
+    1. User selects "Resident" → "Owner"
+    2. Flat number field appears with autocomplete
+    3. User selects flat → Owner details auto-populate
+    4. User fills remaining fields and submits
+    5. User account created and linked to existing Resident record
+    """
+    
+    # Field ordering optimized for workflow
+    field_order = [
+        'user_type', 'resident_type', 'flat_number', 'email', 
+        'first_name', 'last_name', 'block', 'phone_number',
+        'emergency_contact_name', 'emergency_contact_phone', 
+        'move_in_date', 'username', 'password1', 'password2'
+    ]
+    
+    # Hidden field to store resident_id for existing owners
+    resident_id = forms.IntegerField(
+        required=False,
+        widget=forms.HiddenInput(attrs={'id': 'id_resident_id'}),
+    )
+    
+    def clean_flat_number(self):
+        """Validate flat number and handle existing owner linking."""
+        user_type = self.cleaned_data.get("user_type")
+        resident_type = self.cleaned_data.get("resident_type")
+        flat_number = self.cleaned_data.get("flat_number")
+        
+        if user_type == "resident":
+            if not flat_number:
+                raise forms.ValidationError("Flat number is required for residents.")
+            
+            # Get resident_id from form data
+            resident_id = self.cleaned_data.get("resident_id")
+            if not resident_id and hasattr(self, 'data'):
+                resident_id = self.data.get("resident_id")
+                if resident_id:
+                    try:
+                        resident_id = int(resident_id)
+                    except (ValueError, TypeError):
+                        resident_id = None
+            
+            if not resident_id:  # New resident (tenant/family)
+                # Check for existing residents of same type
+                existing_residents = Resident.objects.filter(
+                    flat_number=flat_number,
+                    resident_type=resident_type
+                )
+                if existing_residents.exists():
+                    raise forms.ValidationError(
+                        f"This flat number already has a {resident_type}. "
+                        "Please contact management if this is an error."
+                    )
+            else:  # Existing owner linking
+                try:
+                    existing_resident = Resident.objects.get(id=resident_id)
+                    if existing_resident.flat_number != flat_number:
+                        raise forms.ValidationError(
+                            "Selected flat number doesn't match the resident record."
+                        )
+                    if existing_resident.user is not None:
+                        raise forms.ValidationError(
+                            "This resident record is already linked to a user account."
+                        )
+                except Resident.DoesNotExist:
+                    raise forms.ValidationError("Invalid resident record selected.")
+        
+        return flat_number
+    
+    def save(self, request):
+        """Create user and link to existing resident if applicable."""
+        user = super().save(request)
+        
+        if user.user_type == "resident":
+            resident_id = self.cleaned_data.get("resident_id")
+            if resident_id:
+                # Store resident_id for signal to pick up
+                user._resident_id_to_associate = resident_id
+                user.save()
+            else:
+                # Create new resident profile for tenants/family
+                Resident.objects.create(
+                    user=user,
+                    flat_number=self.cleaned_data["flat_number"],
+                    block=self.cleaned_data.get("block", ""),
+                    phone_number=self.cleaned_data["phone_number"],
+                    alternate_phone=self.cleaned_data.get("alternate_phone", ""),
+                    resident_type=self.cleaned_data["resident_type"],
+                    move_in_date=self.cleaned_data.get("move_in_date"),
+                    emergency_contact_name=self.cleaned_data.get("emergency_contact_name", ""),
+                    emergency_contact_phone=self.cleaned_data.get("emergency_contact_phone", ""),
+                )
+        
+        return user
+```
+
+### **API Endpoint for Flat Autocomplete**
+
+```python
+@require_http_methods(["GET"])
+def get_available_flats(request):
+    """
+    API endpoint to get available flats for owner signup.
+    
+    Returns flats that don't have associated users yet, formatted for
+    the signup form autocomplete functionality.
+    """
+    try:
+        # Get all residents that don't have associated users
+        available_residents = Resident.objects.filter(
+            user__isnull=True,
+            resident_type='owner'
+        ).order_by('flat_number')
+        
+        # Format data for frontend
+        flats_data = []
+        for resident in available_residents:
+            flats_data.append({
+                'id': resident.id,
+                'flat_number': resident.flat_number,
+                'block': resident.block,
+                'owner_name': resident.owner_name or f'Owner of {resident.flat_number}',
+                'email': resident.owner_email or '',
+                'phone': resident.phone_number,
+            })
+        
+        return JsonResponse({
+            'status': 'success',
+            'flats': flats_data,
+            'count': len(flats_data)
+        })
+        
+    except Exception as e:
+        return JsonResponse(
+            {'status': 'error', 'message': str(e)},
+            status=500
+        )
+```
+
+### **Signal-Based User-Resident Linking**
+
+```python
+@receiver(post_save, sender=User)
+def handle_resident_association(sender, instance, created, **kwargs):
+    """
+    Signal to handle resident association for owner signups.
+    
+    This signal is triggered when a user is created and checks if there's
+    a resident_id in the user's metadata that needs to be associated.
+    This is used for the new owner signup workflow where existing residents
+    from the CSV are linked to new user accounts.
+    """
+    # Only process for newly created resident users
+    if not created or instance.user_type != "resident":
+        return
+    
+    # Check if there's a resident_id in the user's metadata
+    resident_id = getattr(instance, '_resident_id_to_associate', None)
+    
+    if resident_id:
+        try:
+            from the_khaki_estate.backend.models import Resident
+            
+            # Find the existing resident record
+            existing_resident = Resident.objects.get(id=resident_id, user__isnull=True)
+            
+            # Associate the user with the existing resident
+            existing_resident.user = instance
+            existing_resident.save()
+            
+            # Update resident with additional signup data
+            if hasattr(instance, '_signup_data'):
+                signup_data = instance._signup_data
+                existing_resident.move_in_date = signup_data.get('move_in_date')
+                existing_resident.emergency_contact_name = signup_data.get('emergency_contact_name', '')
+                existing_resident.emergency_contact_phone = signup_data.get('emergency_contact_phone', '')
+                existing_resident.alternate_phone = signup_data.get('alternate_phone', '')
+                existing_resident.save()
+            
+            logger.info(
+                f"Successfully associated user {instance.username} with existing resident {existing_resident.flat_number}"
+            )
+            
+        except Resident.DoesNotExist:
+            logger.error(
+                f"Failed to associate user {instance.username} with resident_id {resident_id}: Resident not found"
+            )
+        except Exception as e:
+            logger.error(
+                f"Failed to associate user {instance.username} with resident_id {resident_id}: {e}"
+            )
+```
+
+### **Frontend JavaScript Implementation**
+
+```javascript
+// signup-form.js - Dynamic form behavior
+$(document).ready(function() {
+    let availableFlats = [];
+    let filteredFlats = [];
+    
+    // Load available flats on page load
+    loadAvailableFlats();
+    
+    function loadAvailableFlats() {
+        fetch('/backend/api/flats/available/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    availableFlats = data.flats;
+                    console.log('Loaded available flats:', availableFlats.length);
+                }
+            })
+            .catch(error => console.error('Error loading flats:', error));
+    }
+    
+    // User type change handler
+    $('#id_user_type').on('change', function() {
+        const userType = $(this).val();
+        toggleResidentFields(userType === 'resident');
+    });
+    
+    // Resident type change handler
+    $('#id_resident_type').on('change', function() {
+        const residentType = $(this).val();
+        toggleOwnerFields(residentType === 'owner');
+    });
+    
+    // Flat number autocomplete
+    $('#id_flat_number').on('input', function() {
+        filterFlatNumbers();
+    });
+    
+    // Flat selection handler
+    $(document).on('click', '.flat-suggestion', function() {
+        const flatData = $(this).data('flat');
+        selectFlat(flatData);
+    });
+    
+    function selectFlat(flatData) {
+        // Populate form fields with owner data
+        $('#id_flat_number').val(flatData.flat_number);
+        $('#id_resident_id').val(flatData.id);
+        $('#id_email').val(flatData.email);
+        $('#id_first_name').val(flatData.owner_name.split(' ')[0]);
+        $('#id_last_name').val(flatData.owner_name.split(' ').slice(1).join(' '));
+        $('#id_block').val(flatData.block);
+        $('#id_phone_number').val(flatData.phone);
+        
+        // Hide suggestions
+        hideFlatSuggestions();
+        
+        // Show additional fields
+        $('.dynamic-field').show();
+    }
+    
+    function filterFlatNumbers() {
+        const query = $('#id_flat_number').val().toLowerCase();
+        
+        if (query.length < 1) {
+            hideFlatSuggestions();
+            return;
+        }
+        
+        // Filter available flats
+        filteredFlats = availableFlats.filter(flat =>
+            flat.flat_number.toLowerCase().includes(query) ||
+            flat.owner_name.toLowerCase().includes(query)
+        );
+        
+        showFlatSuggestions();
+    }
+    
+    function showFlatSuggestions() {
+        const $suggestionsContainer = $('#flat-suggestions');
+        $suggestionsContainer.empty();
+        
+        filteredFlats.forEach(flat => {
+            const $suggestion = $('<div>')
+                .addClass('flat-suggestion')
+                .data('flat', flat)
+                .html(`
+                    <strong>${flat.flat_number}</strong> - ${flat.owner_name}
+                    <br><small>${flat.email} | ${flat.phone}</small>
+                `);
+            $suggestionsContainer.append($suggestion);
+        });
+        
+        $suggestionsContainer.show();
+    }
+    
+    function hideFlatSuggestions() {
+        $('#flat-suggestions').hide().empty();
+    }
+});
+```
+
+### **Migration Strategy**
+
+```python
+# Migration 0009: populate_residents_from_csv
+def populate_residents(apps, schema_editor):
+    """Run the CSV population command during migration."""
+    from django.core.management import call_command
+    call_command("populate_residents_from_csv", "data /List of Total Flat Owners Khaki Estate.csv")
+
+def reverse_populate_residents(apps, schema_editor):
+    """Clean up CSV-created residents during rollback."""
+    Resident = apps.get_model("backend", "Resident")
+    Resident.objects.filter(user__isnull=True, resident_type='owner').delete()
+
+class Migration(migrations.Migration):
+    dependencies = [
+        ("backend", "0008_populate_announcement_categories"),
+    ]
+    
+    operations = [
+        migrations.RunPython(populate_residents, reverse_populate_residents),
+    ]
+```
+
+### **Workflow Benefits**
+
+**For Owners:**
+- **Streamlined Registration**: Pre-populated data reduces form filling
+- **Data Accuracy**: Owner information comes from verified CSV data
+- **Quick Setup**: Only need to provide additional details (emergency contacts, move-in date)
+
+**For Administrators:**
+- **Bulk Import**: All owners imported from CSV in one operation
+- **Data Consistency**: Standardized data format and validation
+- **Audit Trail**: Complete tracking of user-resident associations
+
+**For System:**
+- **Scalable**: Handles large numbers of owners efficiently
+- **Flexible**: Supports both CSV-imported owners and manual tenant registration
+- **Maintainable**: Clear separation between data import and user account creation
+
+### **Testing Strategy**
+
+```python
+# Test cases for owner signup workflow
+class TestOwnerSignupWorkflow(TestCase):
+    """Test the complete owner signup workflow."""
+    
+    def setUp(self):
+        """Create test data."""
+        # Create CSV-imported resident without user
+        self.resident = Resident.objects.create(
+            user=None,
+            flat_number='A-101',
+            block='A',
+            phone_number='+919876543210',
+            owner_name='John Doe',
+            owner_email='john@example.com',
+            resident_type='owner'
+        )
+    
+    def test_owner_signup_with_existing_resident(self):
+        """Test owner signup linking to existing resident."""
+        form_data = {
+            'user_type': 'resident',
+            'resident_type': 'owner',
+            'flat_number': 'A-101',
+            'resident_id': str(self.resident.id),
+            'email': 'john@example.com',
+            'first_name': 'John',
+            'last_name': 'Doe',
+            'username': 'johndoe',
+            'password1': 'ComplexPassword123!',
+            'password2': 'ComplexPassword123!'
+        }
+        
+        form = NewUserSignupForm(data=form_data)
+        self.assertTrue(form.is_valid())
+        
+        user = form.save(None)
+        self.assertEqual(user.user_type, 'resident')
+        
+        # Check resident linking
+        self.resident.refresh_from_db()
+        self.assertEqual(self.resident.user, user)
+    
+    def test_flat_autocomplete_api(self):
+        """Test the flat autocomplete API endpoint."""
+        response = self.client.get('/backend/api/flats/available/')
+        self.assertEqual(response.status_code, 200)
+        
+        data = response.json()
+        self.assertEqual(data['status'], 'success')
+        self.assertEqual(len(data['flats']), 1)
+        self.assertEqual(data['flats'][0]['flat_number'], 'A-101')
 ```
 
 ---
@@ -3120,5 +3652,5 @@ context = {
 # GOOD: {{ maintenance_request.title }} - preserves request.user
 ```
 
-**Documentation Version**: 2.2
-**System Version**: The Khaki Estate Management System v2.2
+**Documentation Version**: 2.3
+**System Version**: The Khaki Estate Management System v2.3

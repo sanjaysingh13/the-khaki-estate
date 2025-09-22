@@ -113,4 +113,8 @@ urlpatterns = [
         views.mark_all_notifications_read,
         name="mark_all_notifications_read",
     ),
+    # ============================================================================
+    # API ENDPOINTS FOR SIGNUP FORM
+    # ============================================================================
+    path("api/flats/available/", views.get_available_flats, name="get_available_flats"),
 ]

@@ -92,3 +92,55 @@ def update_user_name(sender, instance, created, **kwargs):
             instance.name = full_name
             # Use update to avoid triggering signals again
             User.objects.filter(pk=instance.pk).update(name=full_name)
+
+
+@receiver(post_save, sender=User)
+def handle_resident_association(sender, instance, created, **kwargs):
+    """
+    Signal to handle resident association for owner signups.
+    
+    This signal is triggered when a user is created and checks if there's
+    a resident_id in the user's metadata that needs to be associated.
+    This is used for the new owner signup workflow where existing residents
+    from the CSV are linked to new user accounts.
+    """
+    # Only process for newly created resident users
+    if not created or instance.user_type != "resident":
+        return
+    
+    # Check if there's a resident_id in the user's metadata
+    # This would be set by the signup form when an existing owner is signing up
+    resident_id = getattr(instance, '_resident_id_to_associate', None)
+    
+    if resident_id:
+        try:
+            from the_khaki_estate.backend.models import Resident
+            
+            # Find the existing resident record
+            existing_resident = Resident.objects.get(id=resident_id, user__isnull=True)
+            
+            # Associate the user with the existing resident
+            existing_resident.user = instance
+            existing_resident.save()
+            
+            # Log the successful association
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(
+                f"Successfully associated user {instance.username} with existing resident {existing_resident.flat_number}"
+            )
+            
+        except Resident.DoesNotExist:
+            # Log error but don't break user creation
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(
+                f"Failed to associate user {instance.username} with resident_id {resident_id}: Resident not found"
+            )
+        except Exception as e:
+            # Log error but don't break user creation
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(
+                f"Failed to associate user {instance.username} with resident_id {resident_id}: {e}"
+            )

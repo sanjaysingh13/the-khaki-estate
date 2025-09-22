@@ -1,1 +1,482 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block title %}About The Khaki Estate Management System{% endblock title %}
+
+{% block content %}
+{% endblock content %}
+
+{% block main %}
+<!-- Hero Section for About Page -->
+<!-- This section introduces the management system with a professional header -->
+<!-- Using Bootstrap's positioning and styling for a clean, informative layout -->
+<div class="position-relative overflow-hidden bg-primary text-white text-center py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <!-- Main Title -->
+                <!-- Large, prominent heading that clearly identifies this as the About page -->
+                <h1 class="display-3 fw-bold mb-4">About Our Management System</h1>
+                
+                <!-- Subtitle -->
+                <!-- Descriptive text that explains what the system does -->
+                <p class="lead mb-4">
+                    The Khaki Estate Management System is a comprehensive digital platform designed to enhance 
+                    community living through efficient management of maintenance, bookings, events, and communication.
+                </p>
+                
+                <!-- System Version Info -->
+                <!-- Version information to show the system is actively maintained -->
+                <div class="badge bg-light text-primary fs-6 px-3 py-2">
+                    <i class="fas fa-code me-2"></i>Version 2.0 - Enhanced Features
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Overview Section -->
+<!-- This section provides a high-level overview of what the system offers -->
+<!-- Using Bootstrap's grid system for organized content presentation -->
+<div class="container my-5">
+    <div class="row">
+        <div class="col-12 text-center mb-5">
+            <!-- Section Header -->
+            <h2 class="display-5 fw-bold text-dark mb-3">System Overview</h2>
+            <p class="lead text-muted">
+                A complete digital solution for modern residential community management
+            </p>
+        </div>
+    </div>
+
+    <!-- Key Features Grid -->
+    <!-- Bootstrap card components showcasing the main system capabilities -->
+    <div class="row g-4 mb-5">
+        
+        <!-- Maintenance Management Card -->
+        <!-- Highlights the comprehensive maintenance request system -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-tools text-primary" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title fw-bold">Maintenance Management</h5>
+                    <p class="card-text text-muted">
+                        Submit, track, and manage maintenance requests with smart staff assignment, 
+                        progress tracking, and cost management features.
+                    </p>
+                    <ul class="list-unstyled text-start small">
+                        <li><i class="fas fa-check text-success me-2"></i>Smart staff assignment</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Real-time status updates</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Cost tracking & reporting</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Photo documentation</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Facility Booking Card -->
+        <!-- Showcases the booking system for common areas -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-calendar-check text-success" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title fw-bold">Facility Bookings</h5>
+                    <p class="card-text text-muted">
+                        Book common area facilities including community hall, swimming pool, 
+                        gymnasium, and garden areas with approval workflow.
+                    </p>
+                    <ul class="list-unstyled text-start small">
+                        <li><i class="fas fa-check text-success me-2"></i>Multiple facility types</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Approval workflow</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Fee management</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Availability calendar</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Communication System Card -->
+        <!-- Emphasizes the announcement and notification system -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-bullhorn text-info" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title fw-bold">Communication Hub</h5>
+                    <p class="card-text text-muted">
+                        Stay connected with community announcements, event notifications, 
+                        and real-time updates through our comprehensive communication system.
+                    </p>
+                    <ul class="list-unstyled text-start small">
+                        <li><i class="fas fa-check text-success me-2"></i>Multi-category announcements</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Urgency levels</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Targeted messaging</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Attachment support</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Community Events Card -->
+        <!-- Highlights the event management capabilities -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-calendar-alt text-warning" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title fw-bold">Community Events</h5>
+                    <p class="card-text text-muted">
+                        Organize and participate in community events with RSVP management, 
+                        event details, and attendee coordination features.
+                    </p>
+                    <ul class="list-unstyled text-start small">
+                        <li><i class="fas fa-check text-success me-2"></i>Event creation & management</li>
+                        <li><i class="fas fa-check text-success me-2"></i>RSVP system</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Capacity management</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Event notifications</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Smart Notifications Card -->
+        <!-- Emphasizes the notification and alert system -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-bell text-secondary" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title fw-bold">Smart Notifications</h5>
+                    <p class="card-text text-muted">
+                        Receive timely updates about maintenance requests, bookings, events, 
+                        and important announcements through our intelligent notification system.
+                    </p>
+                    <ul class="list-unstyled text-start small">
+                        <li><i class="fas fa-check text-success me-2"></i>Real-time alerts</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Customizable preferences</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Multiple channels</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Priority levels</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User Roles Section -->
+<!-- This section explains the different types of users and their capabilities -->
+<!-- Using Bootstrap's accordion component for organized role information -->
+<div class="bg-light py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-12 text-center mb-5">
+                <h2 class="display-5 fw-bold text-dark mb-3">User Roles & Capabilities</h2>
+                <p class="lead text-muted">
+                    Different user types with tailored access and functionality
+                </p>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Residents Section -->
+            <div class="col-lg-4 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header bg-primary text-white text-center">
+                        <i class="fas fa-home fa-2x mb-2"></i>
+                        <h5 class="card-title mb-0">Residents</h5>
+                        <small>Owners, Tenants, Family Members</small>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="fw-bold text-primary">Core Capabilities:</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="fas fa-check text-success me-2"></i>Submit maintenance requests</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Book common area facilities</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Participate in community events</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Receive announcements</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Manage personal profile</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Committee Members Section -->
+            <div class="col-lg-4 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header bg-success text-white text-center">
+                        <i class="fas fa-users-cog fa-2x mb-2"></i>
+                        <h5 class="card-title mb-0">Committee Members</h5>
+                        <small>Enhanced Resident Privileges</small>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="fw-bold text-success">Additional Capabilities:</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="fas fa-check text-success me-2"></i>Create & manage announcements</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Approve facility bookings</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Organize community events</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Access resident management</li>
+                            <li><i class="fas fa-check text-success me-2"></i>All resident capabilities</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Maintenance Staff Section -->
+            <div class="col-lg-4 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header bg-warning text-white text-center">
+                        <i class="fas fa-wrench fa-2x mb-2"></i>
+                        <h5 class="card-title mb-0">Maintenance Staff</h5>
+                        <small>Specialized Roles</small>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="fw-bold text-warning">Staff Roles Include:</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="fas fa-check text-success me-2"></i><strong>Facility Manager:</strong> Full oversight</li>
+                            <li><i class="fas fa-check text-success me-2"></i><strong>Accountant:</strong> Financial management</li>
+                            <li><i class="fas fa-check text-success me-2"></i><strong>Supervisor:</strong> Team management</li>
+                            <li><i class="fas fa-check text-success me-2"></i><strong>Technical Staff:</strong> Specialized work</li>
+                            <li><i class="fas fa-check text-success me-2"></i><strong>Support Staff:</strong> Role-specific tasks</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Smart assignment system</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Features Section -->
+<!-- This section highlights the advanced features and capabilities -->
+<!-- Using Bootstrap's grid system with feature highlights -->
+<div class="container my-5">
+    <div class="row">
+        <div class="col-12 text-center mb-5">
+            <h2 class="display-5 fw-bold text-dark mb-3">Advanced System Features</h2>
+            <p class="lead text-muted">
+                Cutting-edge features that make community management efficient and user-friendly
+            </p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Smart Assignment Feature -->
+        <div class="col-md-6">
+            <div class="d-flex">
+                <div class="flex-shrink-0">
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                        <i class="fas fa-brain fa-lg"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h5 class="fw-bold">Smart Staff Assignment</h5>
+                    <p class="text-muted mb-0">
+                        The system automatically suggests qualified staff based on request category and expertise, 
+                        ensuring efficient task distribution and faster resolution times.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cost Management Feature -->
+        <div class="col-md-6">
+            <div class="d-flex">
+                <div class="flex-shrink-0">
+                    <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                        <i class="fas fa-chart-line fa-lg"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h5 class="fw-bold">Cost Management</h5>
+                    <p class="text-muted mb-0">
+                        Track estimated vs actual costs with variance analysis, providing detailed financial 
+                        insights and budget management capabilities.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Metrics Feature -->
+        <div class="col-md-6">
+            <div class="d-flex">
+                <div class="flex-shrink-0">
+                    <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                        <i class="fas fa-chart-bar fa-lg"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h5 class="fw-bold">Performance Metrics</h5>
+                    <p class="text-muted mb-0">
+                        Monitor staff performance, completion times, and resident satisfaction ratings 
+                        with comprehensive analytics and reporting tools.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Status Tracking Feature -->
+        <div class="col-md-6">
+            <div class="d-flex">
+                <div class="flex-shrink-0">
+                    <div class="bg-warning text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                        <i class="fas fa-tasks fa-lg"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h5 class="fw-bold">Advanced Status Tracking</h5>
+                    <p class="text-muted mb-0">
+                        7-stage status workflow with automatic timestamping, providing complete visibility 
+                        into request progress from submission to completion.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Responsive Feature -->
+        <div class="col-md-6">
+            <div class="d-flex">
+                <div class="flex-shrink-0">
+                    <div class="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                        <i class="fas fa-mobile-alt fa-lg"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h5 class="fw-bold">Mobile Responsive</h5>
+                    <p class="text-muted mb-0">
+                        Fully optimized for mobile devices with touch navigation, push notifications, 
+                        and offline capabilities for seamless access anywhere.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Security & Privacy Feature -->
+        <div class="col-md-6">
+            <div class="d-flex">
+                <div class="flex-shrink-0">
+                    <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                        <i class="fas fa-shield-alt fa-lg"></i>
+                    </div>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <h5 class="fw-bold">Security & Privacy</h5>
+                    <p class="text-muted mb-0">
+                        Enterprise-grade security with encrypted data transmission, privacy controls, 
+                        access logging, and secure authentication systems.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Getting Started Section -->
+<!-- This section provides information on how to get started with the system -->
+<!-- Using Bootstrap's alert component for call-to-action -->
+<div class="bg-primary text-white py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 mx-auto text-center">
+                <h2 class="display-6 fw-bold mb-3">Ready to Get Started?</h2>
+                <p class="lead mb-4">
+                    Join our digital community and experience the future of residential management. 
+                    Access your personalized dashboard and start managing your community life today.
+                </p>
+                
+                <!-- Call-to-Action Buttons -->
+                <!-- Different actions based on authentication status -->
+                <div class="d-flex gap-3 justify-content-center flex-wrap">
+                    {% if not request.user.is_authenticated %}
+                    <!-- Login/Register buttons for non-authenticated users -->
+                    <a href="{% url 'account_login' %}" class="btn btn-light btn-lg px-4 py-2 shadow-lg">
+                        <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                    </a>
+                    {% if ACCOUNT_ALLOW_REGISTRATION %}
+                    <a href="{% url 'account_signup' %}" class="btn btn-outline-light btn-lg px-4 py-2 shadow-lg">
+                        <i class="fas fa-user-plus me-2"></i>Join Our Community
+                    </a>
+                    {% endif %}
+                    {% else %}
+                    <!-- Dashboard button for authenticated users -->
+                    <a href="{% url 'backend:dashboard' %}" class="btn btn-light btn-lg px-4 py-2 shadow-lg">
+                        <i class="fas fa-tachometer-alt me-2"></i>Go to Dashboard
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Additional Styling for Enhanced Visual Effects -->
+<style>
+    /* CSS Animations and Hover Effects */
+    /* These styles enhance the user experience with smooth transitions and interactive feedback */
+    
+    /* Card hover effects for better interactivity */
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+        transition: all 0.3s ease;
+    }
+    
+    /* Smooth scrolling behavior for better navigation */
+    html {
+        scroll-behavior: smooth;
+    }
+    
+    /* Icon hover effects */
+    .fa-2x:hover {
+        transform: scale(1.1);
+        transition: transform 0.3s ease;
+    }
+    
+    /* Feature icon animations */
+    .rounded-circle {
+        transition: all 0.3s ease;
+    }
+    
+    .rounded-circle:hover {
+        transform: scale(1.1);
+    }
+    
+    /* Responsive adjustments for different screen sizes */
+    @media (max-width: 768px) {
+        .display-3 {
+            font-size: 2rem !important;
+        }
+        .display-5 {
+            font-size: 1.8rem !important;
+        }
+        .display-6 {
+            font-size: 1.5rem !important;
+        }
+        .lead {
+            font-size: 1.1rem !important;
+        }
+    }
+    
+    /* Custom spacing for better visual hierarchy */
+    .mb-5 {
+        margin-bottom: 3rem !important;
+    }
+    
+    /* Enhanced button styling */
+    .btn-lg {
+        border-radius: 25px;
+        font-weight: 600;
+    }
+    
+    /* Card header styling enhancement */
+    .card-header {
+        border-bottom: none;
+    }
+</style>
+{% endblock main %}

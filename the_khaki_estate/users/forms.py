@@ -26,13 +26,89 @@ class UserAdminCreationForm(admin_forms.AdminUserCreationForm):
         }
 
 
-class UserSignupForm(SignupForm):
+class NewUserSignupForm(SignupForm):
     """
-    Extended signup form that collects resident information during registration.
-    Creates both User and Resident profiles in one step.
+    New signup form with improved workflow for Owner Resident signup.
+    
+    Workflow:
+    1. User Type (topmost field)
+    2. Resident Type (if Resident selected)
+    3. Flat Number (if Resident + Owner selected) - with autocomplete
+    4. Auto-populated fields from database (Email, First name, Last name, Block, Phone)
+    5. Emergency contact fields, Move in date, Password, Username
+    
+    For Tenants and Staff: Dynamic form fields (existing workflow)
     """
 
-    # Personal Information
+    # 1. USER TYPE - Topmost field
+    USER_TYPE_CHOICES = [
+        ("", "Select User Type"),  # Default empty option
+        ("resident", "Resident"),
+        ("staff", "Staff"),
+    ]
+    user_type = forms.ChoiceField(
+        choices=USER_TYPE_CHOICES,
+        required=True,
+        widget=forms.Select(
+            attrs={
+                "class": "form-control",
+                "id": "id_user_type",
+                "onchange": "handleUserTypeChange()",
+            },
+        ),
+        help_text="Are you a resident or staff member?",
+    )
+
+    # 2. RESIDENT TYPE - Second field (shown for residents)
+    RESIDENT_TYPES = [
+        ("", "Select Resident Type"),  # Default empty option
+        ("owner", "Owner"),
+        ("tenant", "Tenant"),
+        ("family", "Family Member"),
+    ]
+    resident_type = forms.ChoiceField(
+        choices=RESIDENT_TYPES,
+        required=False,  # Will be required conditionally via JavaScript validation
+        widget=forms.Select(
+            attrs={
+                "class": "form-control resident-field",
+                "id": "id_resident_type",
+                "onchange": "handleResidentTypeChange()",
+                "style": "display: none;",  # Hidden initially
+            },
+        ),
+        help_text="Your relationship to the property",
+    )
+
+    # 3. FLAT NUMBER - Third field (shown for Resident + Owner)
+    flat_number = forms.CharField(
+        max_length=10,  # Keep original format (e.g., A-101, C1-201)
+        required=False,  # Will be required conditionally
+        widget=forms.TextInput(
+            attrs={
+                "placeholder": "Start typing flat number (e.g., A-101)",
+                "class": "form-control owner-field",
+                "id": "id_flat_number",
+                "onblur": "fetchResidentData()",
+                "oninput": "filterFlatNumbers()",
+                "autocomplete": "off",
+                "style": "display: none;",  # Hidden initially
+            },
+        ),
+        help_text="Your flat/apartment number (will auto-populate other fields)",
+    )
+
+    # Hidden field to store resident_id for existing owners
+    resident_id = forms.IntegerField(
+        required=False,
+        widget=forms.HiddenInput(
+            attrs={
+                "id": "id_resident_id",
+            },
+        ),
+    )
+
+    # 4. AUTO-POPULATED FIELDS (read-only for owners, editable for others)
     first_name = forms.CharField(
         max_length=30,
         required=True,
@@ -40,6 +116,8 @@ class UserSignupForm(SignupForm):
             attrs={
                 "placeholder": "First Name",
                 "class": "form-control",
+                "id": "id_first_name",
+                "readonly": False,  # Will be set readonly for owners
             },
         ),
     )
@@ -50,37 +128,52 @@ class UserSignupForm(SignupForm):
             attrs={
                 "placeholder": "Last Name",
                 "class": "form-control",
+                "id": "id_last_name",
+                "readonly": False,  # Will be set readonly for owners
             },
         ),
     )
 
-    # Residence Information - Only for residents
-    flat_number = forms.CharField(
-        max_length=4,
-        required=False,  # Will be required conditionally for residents
-        widget=forms.TextInput(
-            attrs={
-                "placeholder": "Flat Number (e.g., 101)",
-                "class": "form-control resident-field",
-                "id": "id_flat_number",
-            },
-        ),
-        help_text="Your flat/apartment number",
-    )
+    # Email field (inherited from SignupForm, but we'll customize it)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make email required and add styling
+        self.fields["email"].required = True
+        self.fields["email"].widget.attrs.update({
+            "class": "form-control",
+            "id": "id_email",
+            "readonly": False,  # Will be set readonly for owners
+        })
+        self.fields["username"].widget.attrs.update({
+            "class": "form-control",
+            "id": "id_username",
+        })
+        self.fields["password1"].widget.attrs.update({
+            "class": "form-control",
+            "id": "id_password1",
+        })
+        self.fields["password2"].widget.attrs.update({
+            "class": "form-control",
+            "id": "id_password2",
+        })
+
+    # Block field (auto-populated for owners)
     block = forms.CharField(
         max_length=2,
         required=False,
         widget=forms.TextInput(
             attrs={
                 "placeholder": "Block (e.g., A)",
-                "class": "form-control resident-field",
+                "class": "form-control owner-field",
                 "id": "id_block",
+                "readonly": True,  # Read-only for owners
+                "style": "display: none;",  # Hidden initially
             },
         ),
-        help_text="Building block (if applicable)",
+        help_text="Building block (auto-populated for owners)",
     )
 
-    # Contact Information
+    # Phone number (auto-populated for owners)
     phone_number = forms.CharField(
         max_length=13,
         required=True,
@@ -95,11 +188,15 @@ class UserSignupForm(SignupForm):
             attrs={
                 "placeholder": "+919830425757",
                 "class": "form-control",
+                "id": "id_phone_number",
                 "pattern": r"^\+\d{12}$",
+                "readonly": False,  # Will be set readonly for owners
             },
         ),
         help_text="Your primary contact number (format: +919830425757)",
     )
+
+    # 5. DYNAMIC FIELDS (shown for tenants/staff, hidden for owners)
     alternate_phone = forms.CharField(
         max_length=13,
         required=False,
@@ -113,48 +210,13 @@ class UserSignupForm(SignupForm):
         widget=forms.TextInput(
             attrs={
                 "placeholder": "+919830425757 (optional)",
-                "class": "form-control",
+                "class": "form-control dynamic-field",
+                "id": "id_alternate_phone",
                 "pattern": r"^\+\d{12}$",
+                "style": "display: none;",  # Hidden initially
             },
         ),
         help_text="Alternate contact number (optional, format: +919830425757)",
-    )
-
-    # User Type Selection - Resident or Staff
-    USER_TYPE_CHOICES = [
-        ("", "Select User Type"),  # Default empty option
-        ("resident", "Resident"),
-        ("staff", "Staff"),
-    ]
-    user_type = forms.ChoiceField(
-        choices=USER_TYPE_CHOICES,
-        required=True,
-        widget=forms.Select(
-            attrs={
-                "class": "form-control",
-                "id": "id_user_type",
-            },
-        ),
-        help_text="Are you a resident or staff member?",
-    )
-
-    # Resident Type - Only shown for residents
-    RESIDENT_TYPES = [
-        ("", "Select Resident Type"),  # Default empty option
-        ("owner", "Owner"),
-        ("tenant", "Tenant"),
-        ("family", "Family Member"),
-    ]
-    resident_type = forms.ChoiceField(
-        choices=RESIDENT_TYPES,
-        required=False,  # Will be required conditionally via JavaScript validation
-        widget=forms.Select(
-            attrs={
-                "class": "form-control resident-field",
-                "id": "id_resident_type",
-            },
-        ),
-        help_text="Your relationship to the property",
     )
 
     # Emergency Contact
@@ -165,6 +227,7 @@ class UserSignupForm(SignupForm):
             attrs={
                 "placeholder": "Emergency Contact Name",
                 "class": "form-control",
+                "id": "id_emergency_contact_name",
             },
         ),
     )
@@ -182,33 +245,25 @@ class UserSignupForm(SignupForm):
             attrs={
                 "placeholder": "+919830425757 (optional)",
                 "class": "form-control",
+                "id": "id_emergency_contact_phone",
                 "pattern": r"^\+\d{12}$",
             },
         ),
         help_text="Emergency contact phone number (optional, format: +919830425757)",
     )
 
-    # Move-in Date - Only for residents
+    # Move-in Date
     move_in_date = forms.DateField(
         required=False,
         widget=forms.DateInput(
             attrs={
                 "type": "date",
-                "class": "form-control resident-field",
+                "class": "form-control",
                 "id": "id_move_in_date",
             },
         ),
         help_text="When did you move in? (optional)",
     )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Make email required and add styling
-        self.fields["email"].required = True
-        self.fields["email"].widget.attrs.update({"class": "form-control"})
-        self.fields["username"].widget.attrs.update({"class": "form-control"})
-        self.fields["password1"].widget.attrs.update({"class": "form-control"})
-        self.fields["password2"].widget.attrs.update({"class": "form-control"})
 
     def clean_user_type(self):
         """Validate that user_type is selected"""
@@ -232,6 +287,7 @@ class UserSignupForm(SignupForm):
     def clean_flat_number(self):
         """Validate flat number format and uniqueness for residents only"""
         user_type = self.cleaned_data.get("user_type")
+        resident_type = self.cleaned_data.get("resident_type")
         flat_number = self.cleaned_data.get("flat_number")
 
         # Only validate flat number for residents
@@ -242,15 +298,45 @@ class UserSignupForm(SignupForm):
             # Import here to avoid circular imports
             from the_khaki_estate.backend.models import Resident
 
-            # Check if flat number already exists
-            if Resident.objects.filter(flat_number=flat_number).exists():
-                raise forms.ValidationError(
-                    "This flat number is already registered. Please contact management if this is an error.",
+            # Check if flat number already exists (for new signups, not existing owners)
+            resident_id = self.cleaned_data.get("resident_id")
+            # If resident_id is not in cleaned_data yet, try to get it from raw data
+            if not resident_id and hasattr(self, 'data'):
+                resident_id = self.data.get("resident_id")
+                if resident_id:
+                    try:
+                        resident_id = int(resident_id)
+                    except (ValueError, TypeError):
+                        resident_id = None
+            
+            if not resident_id:  # Only check if this is a new resident
+                # Allow multiple residents per flat (owner + tenant)
+                # Only prevent if there's already a resident of the same type
+                existing_residents = Resident.objects.filter(
+                    flat_number=flat_number,
+                    resident_type=resident_type
                 )
+                if existing_residents.exists():
+                    raise forms.ValidationError(
+                        f"This flat number already has a {resident_type}. Please contact management if this is an error.",
+                    )
+            else:
+                # If resident_id is provided, verify it matches the flat number
+                try:
+                    existing_resident = Resident.objects.get(id=resident_id)
+                    if existing_resident.flat_number != flat_number:
+                        raise forms.ValidationError(
+                            "Selected flat number doesn't match the resident record.",
+                        )
+                    if existing_resident.user is not None:
+                        raise forms.ValidationError(
+                            "This resident record is already linked to a user account.",
+                        )
+                except Resident.DoesNotExist:
+                    raise forms.ValidationError(
+                        "Invalid resident record selected.",
+                    )
 
-            # Validate format (should be numeric)
-            if not flat_number.isdigit():
-                raise forms.ValidationError("Flat number should contain only numbers.")
         elif user_type == "staff" and flat_number:
             # Clear flat number for staff users
             flat_number = ""
@@ -261,7 +347,6 @@ class UserSignupForm(SignupForm):
         """Validate phone number format - already handled by RegexValidator"""
         phone_number = self.cleaned_data.get("phone_number")
         # RegexValidator already ensures the format is correct
-        # Additional validation can be added here if needed
         return phone_number
 
     def clean_alternate_phone(self):
@@ -291,11 +376,9 @@ class UserSignupForm(SignupForm):
         from the_khaki_estate.backend.models import Staff
 
         # Use atomic transaction to ensure both User and profile are created together
-        # This prevents the signal from interfering with our profile creation
         with transaction.atomic():
             # Temporarily disable the signal to prevent interference
             from django.db.models.signals import post_save
-
             from the_khaki_estate.users.signals import create_resident_profile
 
             # Disconnect the signal temporarily
@@ -309,9 +392,7 @@ class UserSignupForm(SignupForm):
                 user.name = f"{self.cleaned_data.get('first_name', '')} {self.cleaned_data.get('last_name', '')}".strip()
                 user.first_name = self.cleaned_data.get("first_name", "")
                 user.last_name = self.cleaned_data.get("last_name", "")
-                user.user_type = self.cleaned_data[
-                    "user_type"
-                ]  # Set user type from form
+                user.user_type = self.cleaned_data["user_type"]
                 user.save()
 
             finally:
@@ -320,106 +401,93 @@ class UserSignupForm(SignupForm):
 
             # Create appropriate profile based on user type
             if user.user_type == "resident":
-                # Handle Resident profile creation
-                try:
-                    resident = user.resident
-                    # Update existing resident with form data
-                    resident.flat_number = self.cleaned_data["flat_number"]
-                    resident.block = self.cleaned_data.get("block", "")
-                    resident.phone_number = self.cleaned_data["phone_number"]
-                    resident.alternate_phone = self.cleaned_data.get(
-                        "alternate_phone",
-                        "",
-                    )
-                    resident.resident_type = self.cleaned_data["resident_type"]
-                    resident.emergency_contact_name = self.cleaned_data.get(
-                        "emergency_contact_name",
-                        "",
-                    )
-                    resident.emergency_contact_phone = self.cleaned_data.get(
-                        "emergency_contact_phone",
-                        "",
-                    )
-                    resident.move_in_date = self.cleaned_data.get("move_in_date")
-                    resident.email_notifications = True
-                    resident.sms_notifications = False
-                    resident.urgent_only = False
-                    resident.is_committee_member = False
-                    resident.save()
-                except Resident.DoesNotExist:
-                    # Create new resident profile if none exists
-                    Resident.objects.create(
-                        user=user,
-                        flat_number=self.cleaned_data["flat_number"],
-                        block=self.cleaned_data.get("block", ""),
-                        phone_number=self.cleaned_data["phone_number"],
-                        alternate_phone=self.cleaned_data.get("alternate_phone", ""),
-                        resident_type=self.cleaned_data["resident_type"],
-                        emergency_contact_name=self.cleaned_data.get(
-                            "emergency_contact_name",
-                            "",
-                        ),
-                        emergency_contact_phone=self.cleaned_data.get(
-                            "emergency_contact_phone",
-                            "",
-                        ),
-                        move_in_date=self.cleaned_data.get("move_in_date"),
-                        # Default notification preferences
-                        email_notifications=True,
-                        sms_notifications=False,
-                        urgent_only=False,
-                        is_committee_member=False,  # Default to False, admin can change later
-                    )
+                resident_type = self.cleaned_data["resident_type"]
+                resident_id = self.cleaned_data.get("resident_id")
+                
+                if resident_type == "owner" and resident_id:
+                    # This is an existing owner - update the existing resident record
+                    try:
+                        existing_resident = Resident.objects.get(id=resident_id)
+                        existing_resident.user = user
+                        existing_resident.move_in_date = self.cleaned_data.get("move_in_date")
+                        existing_resident.emergency_contact_name = self.cleaned_data.get(
+                            "emergency_contact_name", ""
+                        )
+                        existing_resident.emergency_contact_phone = self.cleaned_data.get(
+                            "emergency_contact_phone", ""
+                        )
+                        existing_resident.alternate_phone = self.cleaned_data.get(
+                            "alternate_phone", ""
+                        )
+                        existing_resident.save()
+                    except Resident.DoesNotExist:
+                        # Fallback to creating new resident
+                        self._create_new_resident(user)
+                else:
+                    # This is a new resident (tenant, family member, or new owner)
+                    self._create_new_resident(user)
 
             elif user.user_type == "staff":
-                # For staff users, we'll create a basic staff profile
-                # Note: This form is primarily for residents. Staff should use StaffSignupForm
-                # But we'll handle it gracefully by creating a basic profile
-                try:
-                    staff = user.staff
-                    # Update basic information if staff profile already exists
-                    staff.phone_number = self.cleaned_data["phone_number"]
-                    staff.alternate_phone = self.cleaned_data.get("alternate_phone", "")
-                    staff.emergency_contact_name = self.cleaned_data.get(
-                        "emergency_contact_name",
-                        "",
-                    )
-                    staff.emergency_contact_phone = self.cleaned_data.get(
-                        "emergency_contact_phone",
-                        "",
-                    )
-                    staff.save()
-                except Staff.DoesNotExist:
-                    # Create basic staff profile - they'll need to complete it later
-                    Staff.objects.create(
-                        user=user,
-                        employee_id=f"TEMP_{user.id}",  # Temporary ID - needs to be updated
-                        staff_role="cleaner",  # Default role - needs to be updated
-                        phone_number=self.cleaned_data["phone_number"],
-                        alternate_phone=self.cleaned_data.get("alternate_phone", ""),
-                        emergency_contact_name=self.cleaned_data.get(
-                            "emergency_contact_name",
-                            "",
-                        ),
-                        emergency_contact_phone=self.cleaned_data.get(
-                            "emergency_contact_phone",
-                            "",
-                        ),
-                        employment_status="full_time",
-                        hire_date=timezone.now().date(),
-                        # Default permissions (minimal)
-                        can_access_all_maintenance=False,
-                        can_assign_requests=False,
-                        can_close_requests=False,
-                        can_manage_finances=False,
-                        can_send_announcements=False,
-                        # Default notification preferences
-                        email_notifications=True,
-                        sms_notifications=False,
-                        urgent_only=False,
-                    )
+                # For staff users, create a basic staff profile
+                self._create_staff_profile(user)
 
         return user
+
+    def _create_new_resident(self, user):
+        """Create a new resident profile"""
+        from the_khaki_estate.backend.models import Resident
+        
+        Resident.objects.create(
+            user=user,
+            flat_number=self.cleaned_data["flat_number"],
+            block=self.cleaned_data.get("block", ""),
+            phone_number=self.cleaned_data["phone_number"],
+            alternate_phone=self.cleaned_data.get("alternate_phone", ""),
+            resident_type=self.cleaned_data["resident_type"],
+            emergency_contact_name=self.cleaned_data.get("emergency_contact_name", ""),
+            emergency_contact_phone=self.cleaned_data.get("emergency_contact_phone", ""),
+            move_in_date=self.cleaned_data.get("move_in_date"),
+            # Default notification preferences
+            email_notifications=True,
+            sms_notifications=False,
+            urgent_only=False,
+            is_committee_member=False,
+        )
+
+    def _create_staff_profile(self, user):
+        """Create a basic staff profile"""
+        from the_khaki_estate.backend.models import Staff
+        from django.utils import timezone
+        
+        Staff.objects.create(
+            user=user,
+            employee_id=f"TEMP_{user.id}",  # Temporary ID - needs to be updated
+            staff_role="cleaner",  # Default role - needs to be updated
+            phone_number=self.cleaned_data["phone_number"],
+            alternate_phone=self.cleaned_data.get("alternate_phone", ""),
+            emergency_contact_name=self.cleaned_data.get("emergency_contact_name", ""),
+            emergency_contact_phone=self.cleaned_data.get("emergency_contact_phone", ""),
+            employment_status="full_time",
+            hire_date=timezone.now().date(),
+            # Default permissions (minimal)
+            can_access_all_maintenance=False,
+            can_assign_requests=False,
+            can_close_requests=False,
+            can_manage_finances=False,
+            can_send_announcements=False,
+            # Default notification preferences
+            email_notifications=True,
+            sms_notifications=False,
+            urgent_only=False,
+        )
+
+
+# Keep the old form for backward compatibility
+class UserSignupForm(NewUserSignupForm):
+    """
+    Backward compatibility alias for the new signup form.
+    """
+    pass
 
 
 class StaffSignupForm(SignupForm):

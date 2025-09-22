@@ -61,6 +61,8 @@
       <!-- Your stuff: Third-party javascript libraries go here -->
       <!-- place project specific Javascript in this file -->
       <script defer src="{% static 'js/project.js' %}"></script>
+      <!-- Signup form JavaScript -->
+      <script defer src="{% static 'js/signup-form.js' %}"></script>
     {% endblock javascript %}
   </head>
   <body class="{% block bodyclass %}{% endblock bodyclass %}">
@@ -215,6 +217,8 @@
                             <i class="fas fa-plus"></i> Create Event
                           </a>
                         </li>
+                        <!-- Marketplace section commented out - can be restored if needed -->
+                        <!--
                         <li>
                           <hr class="dropdown-divider" />
                         </li>
@@ -228,6 +232,7 @@
                             <i class="fas fa-plus"></i> Post Item
                           </a>
                         </li>
+                        -->
                       </ul>
                     </li>
                   {% endif %}

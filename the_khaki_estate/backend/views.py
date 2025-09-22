@@ -1385,12 +1385,18 @@ def event_detail(request, event_id):
         rsvp.guests_count + 1 for rsvp in rsvps if rsvp.response == "yes"
     )
 
+    # Calculate capacity percentage for progress bar
+    capacity_percentage = 0
+    if event.max_attendees and event.max_attendees > 0:
+        capacity_percentage = min(100, (total_attendees / event.max_attendees) * 100)
+
     context = {
         "event": event,
         "user_rsvp": user_rsvp,
         "rsvps": rsvps,
         "rsvp_summary": rsvp_summary,
         "total_attendees": total_attendees,
+        "capacity_percentage": capacity_percentage,
         "can_edit": is_committee_member(request.user)
         or event.organizer == request.user,
     }
@@ -1778,6 +1784,51 @@ def mark_all_notifications_read(request):
         return JsonResponse(
             {"status": "error", "message": str(e)},
             status=500,
+        )
+
+
+# ============================================================================
+# API ENDPOINTS FOR SIGNUP FORM
+# ============================================================================
+
+@require_http_methods(["GET"])
+def get_available_flats(request):
+    """
+    API endpoint to get available flats for owner signup.
+    
+    Returns flats that don't have associated users yet, formatted for
+    the signup form autocomplete functionality.
+    """
+    try:
+        # Get all residents that don't have associated users
+        # These are residents created from CSV but not yet linked to user accounts
+        available_residents = Resident.objects.filter(
+            user__isnull=True,
+            resident_type='owner'
+        ).order_by('flat_number')
+        
+        # Format data for frontend
+        flats_data = []
+        for resident in available_residents:
+            flats_data.append({
+                'id': resident.id,
+                'flat_number': resident.flat_number,
+                'block': resident.block,
+                'owner_name': resident.owner_name or f'Owner of {resident.flat_number}',
+                'email': resident.owner_email or '',
+                'phone': resident.phone_number,
+            })
+        
+        return JsonResponse({
+            'status': 'success',
+            'flats': flats_data,
+            'count': len(flats_data)
+        })
+        
+    except Exception as e:
+        return JsonResponse(
+            {'status': 'error', 'message': str(e)},
+            status=500
         )
 
 

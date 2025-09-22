@@ -1,0 +1,242 @@
+{% extends "allauth/layouts/entrance.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+  Sign Up
+{% endblock title %}
+
+{% block content %}
+  <div class="card shadow mx-auto">
+          <div class="card-header bg-primary text-white">
+            <h3 class="card-title mb-0 text-center">
+              <i class="fas fa-user-plus me-2"></i>Sign Up
+            </h3>
+          </div>
+          <div class="card-body">
+            <p class="text-muted text-center mb-4">
+              Already have an account? Then please <a href="{% url 'account_login' %}">sign in</a>.
+            </p>
+            
+            <form method="post" action="{% url 'account_signup' %}" id="signup-form">
+              {% csrf_token %}
+              
+              <!-- User Type Field - Always visible -->
+              <div class="mb-3">
+                <label for="{{ form.user_type.id_for_label }}" class="form-label">
+                  {{ form.user_type.label }} <span class="text-danger">*</span>
+                </label>
+                {{ form.user_type }}
+                {% if form.user_type.help_text %}
+                  <div class="form-text">{{ form.user_type.help_text }}</div>
+                {% endif %}
+                {% if form.user_type.errors %}
+                  <div class="text-danger">{{ form.user_type.errors }}</div>
+                {% endif %}
+              </div>
+              
+              <!-- Resident Type Field - Hidden initially -->
+              <div class="mb-3 resident-field" style="display: none;">
+                <label for="{{ form.resident_type.id_for_label }}" class="form-label">
+                  {{ form.resident_type.label }} <span class="text-danger">*</span>
+                </label>
+                {{ form.resident_type }}
+                {% if form.resident_type.help_text %}
+                  <div class="form-text">{{ form.resident_type.help_text }}</div>
+                {% endif %}
+                {% if form.resident_type.errors %}
+                  <div class="text-danger">{{ form.resident_type.errors }}</div>
+                {% endif %}
+              </div>
+              
+              <!-- Flat Number Field - Hidden initially -->
+              <div class="mb-3 owner-field" style="display: none;">
+                <label for="{{ form.flat_number.id_for_label }}" class="form-label">
+                  {{ form.flat_number.label }} <span class="text-danger">*</span>
+                </label>
+                {{ form.flat_number }}
+                {% if form.flat_number.help_text %}
+                  <div class="form-text">{{ form.flat_number.help_text }}</div>
+                {% endif %}
+                {% if form.flat_number.errors %}
+                  <div class="text-danger">{{ form.flat_number.errors }}</div>
+                {% endif %}
+                <!-- Flat suggestions container -->
+                <div id="flat-suggestions" class="flat-suggestions" style="display: none;"></div>
+              </div>
+              
+              <!-- Hidden resident_id field -->
+              {{ form.resident_id }}
+              
+              <!-- Personal Information Fields -->
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="{{ form.first_name.id_for_label }}" class="form-label">
+                      {{ form.first_name.label }} <span class="text-danger">*</span>
+                    </label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}
+                      <div class="text-danger">{{ form.first_name.errors }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="{{ form.last_name.id_for_label }}" class="form-label">
+                      {{ form.last_name.label }} <span class="text-danger">*</span>
+                    </label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}
+                      <div class="text-danger">{{ form.last_name.errors }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Email Field -->
+              <div class="mb-3">
+                <label for="{{ form.email.id_for_label }}" class="form-label">
+                  {{ form.email.label }} <span class="text-danger">*</span>
+                </label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                  <div class="text-danger">{{ form.email.errors }}</div>
+                {% endif %}
+              </div>
+              
+              <!-- Block Field - Hidden initially -->
+              <div class="mb-3 owner-field" style="display: none;">
+                <label for="{{ form.block.id_for_label }}" class="form-label">
+                  {{ form.block.label }}
+                </label>
+                {{ form.block }}
+                {% if form.block.help_text %}
+                  <div class="form-text">{{ form.block.help_text }}</div>
+                {% endif %}
+                {% if form.block.errors %}
+                  <div class="text-danger">{{ form.block.errors }}</div>
+                {% endif %}
+              </div>
+              
+              <!-- Phone Number Field -->
+              <div class="mb-3">
+                <label for="{{ form.phone_number.id_for_label }}" class="form-label">
+                  {{ form.phone_number.label }} <span class="text-danger">*</span>
+                </label>
+                {{ form.phone_number }}
+                {% if form.phone_number.help_text %}
+                  <div class="form-text">{{ form.phone_number.help_text }}</div>
+                {% endif %}
+                {% if form.phone_number.errors %}
+                  <div class="text-danger">{{ form.phone_number.errors }}</div>
+                {% endif %}
+              </div>
+              
+              <!-- Dynamic Fields - Hidden initially -->
+              <div class="mb-3 dynamic-field" style="display: none;">
+                <label for="{{ form.alternate_phone.id_for_label }}" class="form-label">
+                  {{ form.alternate_phone.label }}
+                </label>
+                {{ form.alternate_phone }}
+                {% if form.alternate_phone.help_text %}
+                  <div class="form-text">{{ form.alternate_phone.help_text }}</div>
+                {% endif %}
+                {% if form.alternate_phone.errors %}
+                  <div class="text-danger">{{ form.alternate_phone.errors }}</div>
+                {% endif %}
+              </div>
+              
+              <!-- Emergency Contact Fields -->
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="{{ form.emergency_contact_name.id_for_label }}" class="form-label">
+                      {{ form.emergency_contact_name.label }}
+                    </label>
+                    {{ form.emergency_contact_name }}
+                    {% if form.emergency_contact_name.errors %}
+                      <div class="text-danger">{{ form.emergency_contact_name.errors }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="{{ form.emergency_contact_phone.id_for_label }}" class="form-label">
+                      {{ form.emergency_contact_phone.label }}
+                    </label>
+                    {{ form.emergency_contact_phone }}
+                    {% if form.emergency_contact_phone.help_text %}
+                      <div class="form-text">{{ form.emergency_contact_phone.help_text }}</div>
+                    {% endif %}
+                    {% if form.emergency_contact_phone.errors %}
+                      <div class="text-danger">{{ form.emergency_contact_phone.errors }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Move-in Date Field -->
+              <div class="mb-3">
+                <label for="{{ form.move_in_date.id_for_label }}" class="form-label">
+                  {{ form.move_in_date.label }}
+                </label>
+                {{ form.move_in_date }}
+                {% if form.move_in_date.help_text %}
+                  <div class="form-text">{{ form.move_in_date.help_text }}</div>
+                {% endif %}
+                {% if form.move_in_date.errors %}
+                  <div class="text-danger">{{ form.move_in_date.errors }}</div>
+                {% endif %}
+              </div>
+              
+              <!-- Username Field -->
+              <div class="mb-3">
+                <label for="{{ form.username.id_for_label }}" class="form-label">
+                  {{ form.username.label }} <span class="text-danger">*</span>
+                </label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                  <div class="text-danger">{{ form.username.errors }}</div>
+                {% endif %}
+              </div>
+              
+              <!-- Password Fields -->
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="{{ form.password1.id_for_label }}" class="form-label">
+                      {{ form.password1.label }} <span class="text-danger">*</span>
+                    </label>
+                    {{ form.password1 }}
+                    {% if form.password1.errors %}
+                      <div class="text-danger">{{ form.password1.errors }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <label for="{{ form.password2.id_for_label }}" class="form-label">
+                      {{ form.password2.label }} <span class="text-danger">*</span>
+                    </label>
+                    {{ form.password2 }}
+                    {% if form.password2.errors %}
+                      <div class="text-danger">{{ form.password2.errors }}</div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Submit Button -->
+              <div class="d-grid">
+                <button type="submit" class="btn btn-primary btn-lg">
+                  <i class="fas fa-user-plus me-2"></i>Sign Up
+                </button>
+              </div>
+            </form>
+          </div>
+  </div>
+{% endblock content %}
+
+{% block inline_javascript %}
+  <!-- Signup form JavaScript is already included in base.html -->
+{% endblock inline_javascript %}
