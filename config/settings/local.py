@@ -30,7 +30,7 @@ SECRET_KEY = env(
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
-    "3.111.27.136",
+    "13.235.191.119",
     "the-khaki-estate.com",
     "www.the-khaki-estate.com",
 ]
