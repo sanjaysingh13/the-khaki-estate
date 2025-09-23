@@ -117,4 +117,14 @@ urlpatterns = [
     # API ENDPOINTS FOR SIGNUP FORM
     # ============================================================================
     path("api/flats/available/", views.get_available_flats, name="get_available_flats"),
+    # ============================================================================
+    # GALLERY URLS - Photo sharing and community interaction
+    # ============================================================================
+    path("gallery/", views.gallery_list, name="gallery_list"),
+    path("gallery/create/", views.gallery_create, name="gallery_create"),
+    path("gallery/<int:photo_id>/", views.gallery_detail, name="gallery_detail"),
+    path("gallery/<int:photo_id>/like/", views.gallery_like_toggle, name="gallery_like_toggle"),
+    path("gallery/<int:photo_id>/comment/", views.gallery_comment_add, name="gallery_comment_add"),
+    path("gallery/my-photos/", views.gallery_my_photos, name="gallery_my_photos"),
+    path("gallery/<int:photo_id>/delete/", views.gallery_photo_delete, name="gallery_photo_delete"),
 ]

@@ -7,6 +7,9 @@ from .models import ApproverAssignment
 from .models import Booking
 from .models import CommonArea
 from .models import Event
+from .models import GalleryComment
+from .models import GalleryLike
+from .models import GalleryPhoto
 from .models import MaintenanceCategory
 from .models import MaintenanceRequest
 from .models import MarketplaceItem
@@ -741,3 +744,326 @@ admin.site.register(Event)
 admin.site.register(MarketplaceItem)
 admin.site.register(NotificationType)
 admin.site.register(Notification)
+
+
+# ============================================================================
+# GALLERY ADMIN INTERFACES
+# ============================================================================
+
+@admin.register(GalleryPhoto)
+class GalleryPhotoAdmin(admin.ModelAdmin):
+    """
+    Admin interface for managing gallery photos.
+    
+    Provides comprehensive management of community photos with
+    moderation capabilities, approval workflows, and bulk operations.
+    """
+    
+    list_display = [
+        'id',
+        'photo_thumbnail',
+        'author_name',
+        'caption_preview',
+        'is_approved',
+        'is_featured',
+        'like_count_display',
+        'comment_count_display',
+        'created_at',
+    ]
+    
+    list_filter = [
+        'is_approved',
+        'is_featured',
+        'created_at',
+        'author__user_type',
+    ]
+    
+    search_fields = [
+        'author__username',
+        'author__email',
+        'author__first_name',
+        'author__last_name',
+        'caption',
+    ]
+    
+    readonly_fields = [
+        'created_at',
+        'updated_at',
+        'like_count_display',
+        'comment_count_display',
+    ]
+    
+    fieldsets = (
+        ('Photo Information', {
+            'fields': ('photo', 'caption', 'author')
+        }),
+        ('Moderation', {
+            'fields': ('is_approved', 'is_featured'),
+            'description': 'Control photo visibility and featured status'
+        }),
+        ('Statistics', {
+            'fields': ('like_count_display', 'comment_count_display'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    actions = [
+        'approve_photos',
+        'unapprove_photos',
+        'feature_photos',
+        'unfeature_photos',
+        'delete_selected_photos',
+    ]
+    
+    def photo_thumbnail(self, obj):
+        """Display a thumbnail of the photo in the admin list."""
+        if obj.photo:
+            return f'<img src="{obj.photo.url}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;">'
+        return "No photo"
+    photo_thumbnail.allow_tags = True
+    photo_thumbnail.short_description = "Photo"
+    
+    def author_name(self, obj):
+        """Display the author's full name."""
+        return obj.author.get_full_name() or obj.author.username
+    author_name.short_description = "Author"
+    author_name.admin_order_field = "author__first_name"
+    
+    def caption_preview(self, obj):
+        """Display a preview of the caption."""
+        if obj.caption:
+            return obj.caption[:50] + "..." if len(obj.caption) > 50 else obj.caption
+        return "No caption"
+    caption_preview.short_description = "Caption"
+    
+    def like_count_display(self, obj):
+        """Display the number of likes."""
+        return obj.get_like_count()
+    like_count_display.short_description = "Likes"
+    
+    def comment_count_display(self, obj):
+        """Display the number of comments."""
+        return obj.get_comment_count()
+    comment_count_display.short_description = "Comments"
+    
+    def approve_photos(self, request, queryset):
+        """Bulk approve selected photos."""
+        updated = queryset.update(is_approved=True)
+        self.message_user(
+            request,
+            f'{updated} photos have been approved and are now visible to residents.'
+        )
+    approve_photos.short_description = "Approve selected photos"
+    
+    def unapprove_photos(self, request, queryset):
+        """Bulk unapprove selected photos."""
+        updated = queryset.update(is_approved=False)
+        self.message_user(
+            request,
+            f'{updated} photos have been unapproved and are now hidden from residents.'
+        )
+    unapprove_photos.short_description = "Unapprove selected photos"
+    
+    def feature_photos(self, request, queryset):
+        """Bulk feature selected photos."""
+        updated = queryset.update(is_featured=True)
+        self.message_user(
+            request,
+            f'{updated} photos have been featured and will appear prominently in the gallery.'
+        )
+    feature_photos.short_description = "Feature selected photos"
+    
+    def unfeature_photos(self, request, queryset):
+        """Bulk unfeature selected photos."""
+        updated = queryset.update(is_featured=False)
+        self.message_user(
+            request,
+            f'{updated} photos have been unfeatured.'
+        )
+    unfeature_photos.short_description = "Unfeature selected photos"
+    
+    def delete_selected_photos(self, request, queryset):
+        """Bulk delete selected photos with confirmation."""
+        count = queryset.count()
+        queryset.delete()
+        self.message_user(
+            request,
+            f'{count} photos have been permanently deleted.'
+        )
+    delete_selected_photos.short_description = "Delete selected photos"
+
+
+@admin.register(GalleryComment)
+class GalleryCommentAdmin(admin.ModelAdmin):
+    """
+    Admin interface for managing gallery comments.
+    
+    Provides moderation capabilities for photo comments with
+    approval workflows and content management.
+    """
+    
+    list_display = [
+        'id',
+        'author_name',
+        'photo_preview',
+        'content_preview',
+        'is_approved',
+        'is_reply',
+        'created_at',
+    ]
+    
+    list_filter = [
+        'is_approved',
+        'created_at',
+        'photo__author__user_type',
+    ]
+    
+    search_fields = [
+        'author__username',
+        'author__email',
+        'author__first_name',
+        'author__last_name',
+        'content',
+        'photo__caption',
+    ]
+    
+    readonly_fields = [
+        'created_at',
+        'updated_at',
+    ]
+    
+    fieldsets = (
+        ('Comment Information', {
+            'fields': ('photo', 'author', 'content', 'parent')
+        }),
+        ('Moderation', {
+            'fields': ('is_approved',),
+            'description': 'Control comment visibility'
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    actions = [
+        'approve_comments',
+        'unapprove_comments',
+        'delete_selected_comments',
+    ]
+    
+    def author_name(self, obj):
+        """Display the author's full name."""
+        return obj.author.get_full_name() or obj.author.username
+    author_name.short_description = "Author"
+    author_name.admin_order_field = "author__first_name"
+    
+    def photo_preview(self, obj):
+        """Display a preview of the associated photo."""
+        if obj.photo.photo:
+            return f'<img src="{obj.photo.photo.url}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">'
+        return "No photo"
+    photo_preview.allow_tags = True
+    photo_preview.short_description = "Photo"
+    
+    def content_preview(self, obj):
+        """Display a preview of the comment content."""
+        if obj.content:
+            return obj.content[:100] + "..." if len(obj.content) > 100 else obj.content
+        return "No content"
+    content_preview.short_description = "Content"
+    
+    def is_reply(self, obj):
+        """Check if this is a reply to another comment."""
+        return obj.parent is not None
+    is_reply.boolean = True
+    is_reply.short_description = "Is Reply"
+    
+    def approve_comments(self, request, queryset):
+        """Bulk approve selected comments."""
+        updated = queryset.update(is_approved=True)
+        self.message_user(
+            request,
+            f'{updated} comments have been approved and are now visible.'
+        )
+    approve_comments.short_description = "Approve selected comments"
+    
+    def unapprove_comments(self, request, queryset):
+        """Bulk unapprove selected comments."""
+        updated = queryset.update(is_approved=False)
+        self.message_user(
+            request,
+            f'{updated} comments have been unapproved and are now hidden.'
+        )
+    unapprove_comments.short_description = "Unapprove selected comments"
+    
+    def delete_selected_comments(self, request, queryset):
+        """Bulk delete selected comments."""
+        count = queryset.count()
+        queryset.delete()
+        self.message_user(
+            request,
+            f'{count} comments have been permanently deleted.'
+        )
+    delete_selected_comments.short_description = "Delete selected comments"
+
+
+@admin.register(GalleryLike)
+class GalleryLikeAdmin(admin.ModelAdmin):
+    """
+    Admin interface for managing gallery likes.
+    
+    Provides read-only access to like data for analytics and moderation.
+    """
+    
+    list_display = [
+        'id',
+        'user_name',
+        'photo_preview',
+        'created_at',
+    ]
+    
+    list_filter = [
+        'created_at',
+        'user__user_type',
+    ]
+    
+    search_fields = [
+        'user__username',
+        'user__email',
+        'user__first_name',
+        'user__last_name',
+        'photo__caption',
+    ]
+    
+    readonly_fields = [
+        'user',
+        'photo',
+        'created_at',
+    ]
+    
+    def user_name(self, obj):
+        """Display the user's full name."""
+        return obj.user.get_full_name() or obj.user.username
+    user_name.short_description = "User"
+    user_name.admin_order_field = "user__first_name"
+    
+    def photo_preview(self, obj):
+        """Display a preview of the liked photo."""
+        if obj.photo.photo:
+            return f'<img src="{obj.photo.photo.url}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">'
+        return "No photo"
+    photo_preview.allow_tags = True
+    photo_preview.short_description = "Photo"
+    
+    def has_add_permission(self, request):
+        """Disable adding likes through admin (likes are created via user interaction)."""
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        """Disable editing likes through admin."""
+        return False

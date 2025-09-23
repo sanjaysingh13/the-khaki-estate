@@ -13,6 +13,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.shortcuts import render
+from django.template.loader import render_to_string
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -25,6 +26,9 @@ from .models import Comment
 from .models import CommonArea
 from .models import Event
 from .models import EventRSVP
+from .models import GalleryComment
+from .models import GalleryLike
+from .models import GalleryPhoto
 from .models import MaintenanceCategory
 from .models import MaintenanceRequest
 from .models import MaintenanceUpdate
@@ -1838,3 +1842,285 @@ def get_available_flats(request):
 
 # Import Celery tasks (these would be defined in tasks.py)
 # TODO: Import notification tasks when implemented
+
+
+# ============================================================================
+# GALLERY VIEWS - Photo sharing and community interaction
+# ============================================================================
+
+@login_required
+def gallery_list(request):
+    """
+    Display the gallery photo wall with timeline view.
+    
+    Shows all approved photos in chronological order (latest first)
+    with like counts, comment counts, and interaction capabilities.
+    """
+    # Get all approved photos with related data
+    photos = GalleryPhoto.objects.filter(
+        is_approved=True
+    ).select_related('author').prefetch_related(
+        'likes', 'comments'
+    ).order_by('-created_at')
+    
+    # Pagination for better performance
+    paginator = Paginator(photos, 12)  # 12 photos per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Add interaction data for each photo
+    for photo in page_obj:
+        photo.like_count = photo.get_like_count()
+        photo.comment_count = photo.get_comment_count()
+        photo.is_liked = photo.is_liked_by(request.user)
+        photo.recent_comments = photo.get_recent_comments(3)
+    
+    context = {
+        'page_obj': page_obj,
+        'photos': page_obj,
+        'user': request.user,
+    }
+    
+    return render(request, 'backend/gallery/list.html', context)
+
+
+@login_required
+def gallery_create(request):
+    """
+    Handle photo upload to the gallery.
+    
+    Allows residents to upload photos with captions to share with
+    the community. Includes file validation and error handling.
+    """
+    if request.method == 'POST':
+        # Import the form here to avoid circular imports
+        from .gallery_forms import GalleryPhotoForm
+        
+        form = GalleryPhotoForm(request.POST, request.FILES, user=request.user)
+        
+        if form.is_valid():
+            try:
+                photo = form.save()
+                messages.success(
+                    request,
+                    f"Photo uploaded successfully! "
+                    f"Thank you for sharing with the community."
+                )
+                return redirect('backend:gallery_detail', photo_id=photo.id)
+            except Exception as e:
+                messages.error(
+                    request,
+                    f"Error uploading photo: {str(e)}"
+                )
+        else:
+            # Display form errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
+    else:
+        from .gallery_forms import GalleryPhotoForm
+        form = GalleryPhotoForm(user=request.user)
+    
+    context = {
+        'form': form,
+        'user': request.user,
+    }
+    
+    return render(request, 'backend/gallery/create.html', context)
+
+
+@login_required
+def gallery_detail(request, photo_id):
+    """
+    Display detailed view of a single photo with full comments.
+    
+    Shows the photo with all comments, like/unlike functionality,
+    and comment form for user interaction.
+    """
+    photo = get_object_or_404(
+        GalleryPhoto.objects.select_related('author').prefetch_related(
+            'likes', 'comments__author', 'comments__replies__author'
+        ),
+        id=photo_id,
+        is_approved=True
+    )
+    
+    # Get all comments for this photo (including replies)
+    comments = photo.comments.filter(
+        is_approved=True,
+        parent__isnull=True  # Only top-level comments
+    ).order_by('created_at')
+    
+    # Add interaction data
+    photo.like_count = photo.get_like_count()
+    photo.comment_count = photo.get_comment_count()
+    photo.is_liked = photo.is_liked_by(request.user)
+    
+    # Prepare comment form
+    from .gallery_forms import GalleryCommentForm
+    comment_form = GalleryCommentForm(user=request.user, photo=photo)
+    
+    context = {
+        'photo': photo,
+        'comments': comments,
+        'comment_form': comment_form,
+        'user': request.user,
+    }
+    
+    return render(request, 'backend/gallery/detail.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def gallery_like_toggle(request, photo_id):
+    """
+    AJAX endpoint to like/unlike a photo.
+    
+    Handles the like/unlike functionality via AJAX requests.
+    Returns JSON response with updated like count and status.
+    """
+    photo = get_object_or_404(GalleryPhoto, id=photo_id, is_approved=True)
+    
+    try:
+        # Check if user already liked this photo
+        like, created = GalleryLike.objects.get_or_create(
+            photo=photo,
+            user=request.user
+        )
+        
+        if not created:
+            # User already liked, so unlike (delete the like)
+            like.delete()
+            is_liked = False
+            message = "Photo unliked"
+        else:
+            # User liked the photo
+            is_liked = True
+            message = "Photo liked"
+        
+        # Get updated like count
+        like_count = photo.get_like_count()
+        
+        return JsonResponse({
+            'status': 'success',
+            'is_liked': is_liked,
+            'like_count': like_count,
+            'message': message
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f"Error updating like: {str(e)}"
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def gallery_comment_add(request, photo_id):
+    """
+    AJAX endpoint to add a comment to a photo.
+    
+    Handles comment submission via AJAX and returns the new comment
+    as HTML for dynamic insertion into the page.
+    """
+    photo = get_object_or_404(GalleryPhoto, id=photo_id, is_approved=True)
+    
+    try:
+        # Get parent comment if this is a reply
+        parent_comment_id = request.POST.get('parent_comment_id')
+        parent_comment = None
+        if parent_comment_id:
+            parent_comment = get_object_or_404(
+                GalleryComment,
+                id=parent_comment_id,
+                photo=photo
+            )
+        
+        # Import the form here to avoid circular imports
+        from .gallery_forms import GalleryCommentForm
+        
+        form = GalleryCommentForm(
+            request.POST,
+            user=request.user,
+            photo=photo,
+            parent_comment=parent_comment
+        )
+        
+        if form.is_valid():
+            comment = form.save()
+            
+            # Return the new comment as HTML
+            comment_html = render_to_string(
+                'backend/gallery/partials/comment.html',
+                {'comment': comment, 'user': request.user}
+            )
+            
+            return JsonResponse({
+                'status': 'success',
+                'comment_html': comment_html,
+                'comment_count': photo.get_comment_count(),
+                'message': 'Comment added successfully'
+            })
+        else:
+            # Return form errors
+            errors = []
+            for field, field_errors in form.errors.items():
+                for error in field_errors:
+                    errors.append(f"{field}: {error}")
+            
+            return JsonResponse({
+                'status': 'error',
+                'message': '; '.join(errors)
+            }, status=400)
+            
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f"Error adding comment: {str(e)}"
+        }, status=500)
+
+
+@login_required
+def gallery_my_photos(request):
+    """
+    Display user's own photos for management.
+    
+    Shows all photos uploaded by the current user, including
+    unapproved ones, with edit/delete options.
+    """
+    photos = GalleryPhoto.objects.filter(
+        author=request.user
+    ).order_by('-created_at')
+    
+    # Pagination
+    paginator = Paginator(photos, 12)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'photos': page_obj,
+        'user': request.user,
+    }
+    
+    return render(request, 'backend/gallery/my_photos.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def gallery_photo_delete(request, photo_id):
+    """
+    Delete a photo (only by the author).
+    
+    Allows users to delete their own photos with confirmation.
+    """
+    photo = get_object_or_404(GalleryPhoto, id=photo_id, author=request.user)
+    
+    try:
+        photo.delete()
+        messages.success(request, "Photo deleted successfully.")
+        return redirect('backend:gallery_my_photos')
+    except Exception as e:
+        messages.error(request, f"Error deleting photo: {str(e)}")
+        return redirect('backend:gallery_detail', photo_id=photo_id)

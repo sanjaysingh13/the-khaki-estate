@@ -1200,3 +1200,161 @@ class Notification(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+
+
+class GalleryPhoto(models.Model):
+    """
+    Gallery photos shared by residents.
+    
+    This model stores photos uploaded by residents with captions,
+    timestamps, and interaction tracking (likes, comments).
+    """
+    
+    # Photo details
+    photo = models.ImageField(
+        upload_to="gallery/",
+        help_text="Photo to be shared in the gallery"
+    )
+    caption = models.TextField(
+        blank=True,
+        help_text="Optional caption for the photo"
+    )
+    
+    # Author information
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="gallery_photos",
+        help_text="Resident who shared this photo"
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Privacy and moderation
+    is_approved = models.BooleanField(
+        default=True,
+        help_text="Whether this photo is approved for public viewing"
+    )
+    is_featured = models.BooleanField(
+        default=False,
+        help_text="Whether this photo is featured in the gallery"
+    )
+    
+    def __str__(self):
+        return f"Photo by {self.author.get_full_name()} - {self.created_at.strftime('%Y-%m-%d')}"
+    
+    def get_like_count(self):
+        """Get the total number of likes for this photo."""
+        return self.likes.count()
+    
+    def get_comment_count(self):
+        """Get the total number of comments for this photo."""
+        return self.comments.count()
+    
+    def is_liked_by(self, user):
+        """Check if a specific user has liked this photo."""
+        if not user.is_authenticated:
+            return False
+        return self.likes.filter(user=user).exists()
+    
+    def get_recent_comments(self, limit=5):
+        """Get recent comments for this photo."""
+        return self.comments.order_by('-created_at')[:limit]
+    
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Gallery Photo"
+        verbose_name_plural = "Gallery Photos"
+
+
+class GalleryLike(models.Model):
+    """
+    Likes on gallery photos.
+    
+    Tracks which users have liked which photos to prevent duplicate likes
+    and provide like/unlike functionality.
+    """
+    
+    photo = models.ForeignKey(
+        GalleryPhoto,
+        on_delete=models.CASCADE,
+        related_name="likes",
+        help_text="Photo that was liked"
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="gallery_likes",
+        help_text="User who liked the photo"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.user.get_full_name()} liked photo by {self.photo.author.get_full_name()}"
+    
+    class Meta:
+        unique_together = ["photo", "user"]  # Prevent duplicate likes
+        ordering = ["-created_at"]
+
+
+class GalleryComment(models.Model):
+    """
+    Comments on gallery photos.
+    
+    Allows residents to comment on photos shared in the gallery.
+    Supports threaded comments with parent-child relationships.
+    """
+    
+    photo = models.ForeignKey(
+        GalleryPhoto,
+        on_delete=models.CASCADE,
+        related_name="comments",
+        help_text="Photo being commented on"
+    )
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="gallery_comments",
+        help_text="User who wrote the comment"
+    )
+    content = models.TextField(
+        help_text="Comment content"
+    )
+    
+    # Threaded comments support
+    parent = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="replies",
+        help_text="Parent comment for threaded discussions"
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Moderation
+    is_approved = models.BooleanField(
+        default=True,
+        help_text="Whether this comment is approved for public viewing"
+    )
+    
+    def __str__(self):
+        return f"Comment by {self.author.get_full_name()} on photo by {self.photo.author.get_full_name()}"
+    
+    def get_replies(self):
+        """Get all replies to this comment."""
+        return self.replies.filter(is_approved=True).order_by('created_at')
+    
+    def is_reply(self):
+        """Check if this comment is a reply to another comment."""
+        return self.parent is not None
+    
+    class Meta:
+        ordering = ["created_at"]
+        verbose_name = "Gallery Comment"
+        verbose_name_plural = "Gallery Comments"

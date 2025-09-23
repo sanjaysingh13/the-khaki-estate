@@ -1,0 +1,430 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ photo.author.get_full_name|default:photo.author.username }}'s Photo - Gallery{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <!-- Navigation -->
+            <div class="mb-3">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'backend:gallery_list' %}">
+                                <i class="fas fa-images me-1"></i>Gallery
+                            </a>
+                        </li>
+                        <li class="breadcrumb-item active" aria-current="page">Photo Details</li>
+                    </ol>
+                </nav>
+            </div>
+
+            <!-- Photo Card -->
+            <div class="card shadow mb-4">
+                <!-- Photo Header -->
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar me-3">
+                                <i class="fas fa-user-circle fa-2x text-primary"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0">{{ photo.author.get_full_name|default:photo.author.username }}</h5>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    {{ photo.created_at|date:"F d, Y \a\t g:i A" }}
+                                </small>
+                            </div>
+                        </div>
+                        <div class="photo-actions">
+                            <button class="btn btn-sm like-btn {% if photo.is_liked %}btn-danger{% else %}btn-outline-danger{% endif %}"
+                                    data-photo-id="{{ photo.id }}"
+                                    data-liked="{{ photo.is_liked|yesno:'true,false' }}">
+                                <i class="fas fa-heart"></i>
+                                <span class="like-count">{{ photo.like_count }}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Photo -->
+                <div class="card-body p-0">
+                    <img src="{{ photo.photo.url }}" 
+                         alt="{{ photo.caption|default:'Gallery photo' }}"
+                         class="img-fluid w-100"
+                         style="max-height: 600px; object-fit: cover;">
+                </div>
+
+                <!-- Photo Info -->
+                <div class="card-body">
+                    {% if photo.caption %}
+                        <p class="card-text">{{ photo.caption }}</p>
+                    {% endif %}
+
+                    <!-- Stats -->
+                    <div class="d-flex justify-content-between align-items-center text-muted">
+                        <div>
+                            <span class="me-3">
+                                <i class="fas fa-heart text-danger me-1"></i>
+                                <span class="like-count">{{ photo.like_count }}</span> likes
+                            </span>
+                            <span>
+                                <i class="fas fa-comment text-primary me-1"></i>
+                                <span class="comment-count">{{ photo.comment_count }}</span> comments
+                            </span>
+                        </div>
+                        <small>{{ photo.created_at|timesince }} ago</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comments Section -->
+            <div class="card shadow">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-comments me-2"></i>Comments
+                        <span class="badge bg-primary ms-2 comment-count">{{ photo.comment_count }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Comment Form -->
+                    <form id="comment-form" class="mb-4">
+                        {% csrf_token %}
+                        <div class="input-group">
+                            <textarea class="form-control" 
+                                      id="comment-content"
+                                      name="content"
+                                      rows="2"
+                                      placeholder="Write a comment..."
+                                      required></textarea>
+                            <button class="btn btn-primary" type="submit" id="comment-submit-btn">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">
+                            <span id="comment-count">0</span>/1000 characters
+                        </div>
+                    </form>
+
+                    <!-- Comments List -->
+                    <div id="comments-container">
+                        {% if comments %}
+                            {% for comment in comments %}
+                                <div class="comment-item mb-3" data-comment-id="{{ comment.id }}">
+                                    <div class="d-flex">
+                                        <div class="avatar me-3">
+                                            <i class="fas fa-user-circle fa-lg text-primary"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="comment-header d-flex justify-content-between align-items-start mb-1">
+                                                <div>
+                                                    <strong>{{ comment.author.get_full_name|default:comment.author.username }}</strong>
+                                                    <small class="text-muted ms-2">
+                                                        {{ comment.created_at|timesince }} ago
+                                                    </small>
+                                                </div>
+                                                <button class="btn btn-sm btn-outline-secondary reply-btn"
+                                                        data-comment-id="{{ comment.id }}">
+                                                    <i class="fas fa-reply me-1"></i>Reply
+                                                </button>
+                                            </div>
+                                            <p class="comment-content mb-2">{{ comment.content }}</p>
+                                            
+                                            <!-- Reply Form (Hidden by default) -->
+                                            <div class="reply-form d-none" id="reply-form-{{ comment.id }}">
+                                                <form class="reply-form-inner">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="parent_comment_id" value="{{ comment.id }}">
+                                                    <div class="input-group input-group-sm">
+                                                        <textarea class="form-control" 
+                                                                  name="content"
+                                                                  rows="1"
+                                                                  placeholder="Write a reply..."
+                                                                  required></textarea>
+                                                        <button class="btn btn-outline-primary" type="submit">
+                                                            <i class="fas fa-paper-plane"></i>
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
+
+                                            <!-- Replies -->
+                                            {% for reply in comment.get_replies %}
+                                                <div class="reply-item ms-4 mt-2">
+                                                    <div class="d-flex">
+                                                        <div class="avatar me-2">
+                                                            <i class="fas fa-user-circle text-secondary"></i>
+                                                        </div>
+                                                        <div class="flex-grow-1">
+                                                            <div class="reply-header mb-1">
+                                                                <strong>{{ reply.author.get_full_name|default:reply.author.username }}</strong>
+                                                                <small class="text-muted ms-2">
+                                                                    {{ reply.created_at|timesince }} ago
+                                                                </small>
+                                                            </div>
+                                                            <p class="reply-content mb-0">{{ reply.content }}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-comment-slash fa-2x mb-2"></i>
+                                <p class="mb-0">No comments yet. Be the first to comment!</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Back to Gallery -->
+            <div class="text-center mt-4">
+                <a href="{% url 'backend:gallery_list' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Gallery
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Spinner -->
+<div id="loading-spinner" class="text-center d-none">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block inline_javascript %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const commentForm = document.getElementById('comment-form');
+    const commentContent = document.getElementById('comment-content');
+    const commentCount = document.getElementById('comment-count');
+    const commentSubmitBtn = document.getElementById('comment-submit-btn');
+    const commentsContainer = document.getElementById('comments-container');
+    const photoId = {{ photo.id }};
+
+    // Comment character count
+    commentContent.addEventListener('input', function() {
+        const count = this.value.length;
+        commentCount.textContent = count;
+        
+        if (count > 1000) {
+            commentCount.classList.add('text-danger');
+        } else {
+            commentCount.classList.remove('text-danger');
+        }
+    });
+
+    // Comment form submission
+    commentForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const content = commentContent.value.trim();
+        if (!content) {
+            alert('Please enter a comment');
+            return;
+        }
+
+        // Show loading state
+        commentSubmitBtn.disabled = true;
+        commentSubmitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        // Submit comment
+        fetch(`/backend/gallery/${photoId}/comment/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `content=${encodeURIComponent(content)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Add new comment to the container
+                commentsContainer.insertAdjacentHTML('beforeend', data.comment_html);
+                
+                // Update comment count
+                document.querySelectorAll('.comment-count').forEach(span => {
+                    span.textContent = data.comment_count;
+                });
+                
+                // Clear form
+                commentContent.value = '';
+                commentCount.textContent = '0';
+                
+                // Show success message
+                showToast(data.message, 'success');
+            } else {
+                showToast(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('An error occurred. Please try again.', 'error');
+        })
+        .finally(() => {
+            commentSubmitBtn.disabled = false;
+            commentSubmitBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+        });
+    });
+
+    // Reply functionality
+    document.querySelectorAll('.reply-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const commentId = this.dataset.commentId;
+            const replyForm = document.getElementById(`reply-form-${commentId}`);
+            
+            if (replyForm.classList.contains('d-none')) {
+                replyForm.classList.remove('d-none');
+                this.innerHTML = '<i class="fas fa-times me-1"></i>Cancel';
+            } else {
+                replyForm.classList.add('d-none');
+                this.innerHTML = '<i class="fas fa-reply me-1"></i>Reply';
+            }
+        });
+    });
+
+    // Reply form submission
+    document.querySelectorAll('.reply-form-inner').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const parentCommentId = this.querySelector('[name="parent_comment_id"]').value;
+            const content = this.querySelector('[name="content"]').value.trim();
+            
+            if (!content) {
+                alert('Please enter a reply');
+                return;
+            }
+
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            fetch(`/backend/gallery/${photoId}/comment/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `content=${encodeURIComponent(content)}&parent_comment_id=${parentCommentId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Add reply to the appropriate comment
+                    const commentItem = document.querySelector(`[data-comment-id="${parentCommentId}"]`);
+                    commentItem.insertAdjacentHTML('beforeend', data.comment_html);
+                    
+                    // Update comment count
+                    document.querySelectorAll('.comment-count').forEach(span => {
+                        span.textContent = data.comment_count;
+                    });
+                    
+                    // Clear form and hide it
+                    this.querySelector('[name="content"]').value = '';
+                    this.closest('.reply-form').classList.add('d-none');
+                    
+                    // Reset reply button
+                    const replyBtn = commentItem.querySelector('.reply-btn');
+                    replyBtn.innerHTML = '<i class="fas fa-reply me-1"></i>Reply';
+                    
+                    showToast('Reply added successfully', 'success');
+                } else {
+                    showToast(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('An error occurred. Please try again.', 'error');
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            });
+        });
+    });
+
+    // Like/unlike functionality
+    document.querySelectorAll('.like-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const isLiked = this.dataset.liked === 'true';
+            const likeCountSpan = this.querySelector('.like-count');
+            const icon = this.querySelector('i');
+            
+            // Show loading state
+            this.disabled = true;
+            icon.className = 'fas fa-spinner fa-spin';
+            
+            fetch(`/backend/gallery/${photoId}/like/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Update button state
+                    if (data.is_liked) {
+                        this.classList.remove('btn-outline-danger');
+                        this.classList.add('btn-danger');
+                        icon.className = 'fas fa-heart';
+                    } else {
+                        this.classList.remove('btn-danger');
+                        this.classList.add('btn-outline-danger');
+                        icon.className = 'far fa-heart';
+                    }
+                    
+                    // Update like count
+                    likeCountSpan.textContent = data.like_count;
+                    this.dataset.liked = data.is_liked.toString();
+                    
+                    showToast(data.message, 'success');
+                } else {
+                    showToast(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('An error occurred. Please try again.', 'error');
+            })
+            .finally(() => {
+                this.disabled = false;
+            });
+        });
+    });
+});
+
+// Toast notification function
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 3000);
+}
+</script>
+{% endblock %}
