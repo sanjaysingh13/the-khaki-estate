@@ -280,9 +280,11 @@ try:
     }
 
     # Tools that generate code samples can use SERVERS to point to the correct domain
-    SPECTACULAR_SETTINGS["SERVERS"] = [
-        {"url": "https://the-khaki-estate.com", "description": "Production server"},
-    ]
+    # Note: SPECTACULAR_SETTINGS removed as drf-spectacular is not in dependencies
+    # If you need API documentation, add 'drf-spectacular' to pyproject.toml and uncomment:
+    # SPECTACULAR_SETTINGS["SERVERS"] = [
+    #     {"url": "https://the-khaki-estate.com", "description": "Production server"},
+    # ]
 
 except Exception as e:
     # If any error occurs during production configuration setup,
