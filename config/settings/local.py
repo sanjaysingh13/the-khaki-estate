@@ -33,6 +33,8 @@ ALLOWED_HOSTS = [
     "13.235.191.119",
     "the-khaki-estate.com",
     "www.the-khaki-estate.com",
+    "myportal.heliossolutions.co",
+    "myportal-test.heliossolutions.co",
 ]
 
 # CACHES

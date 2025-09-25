@@ -70,7 +70,7 @@ The Khaki Estate Management System
                 send_mail(
                     subject=notification.title,
                     message=email_message,
-                    from_email="noreply@thekhakie state.com",
+                    from_email="admin@the-khaki-estate.com",
                     recipient_list=[recipient.email],
                     fail_silently=False,
                 )

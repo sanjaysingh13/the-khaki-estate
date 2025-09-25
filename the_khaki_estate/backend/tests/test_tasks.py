@@ -70,7 +70,7 @@ class SendNotificationTaskTest(TestCase):
             self.assertEqual(
                 call_args[1]["message"], "This is a test notification message"
             )
-            self.assertEqual(call_args[1]["from_email"], "noreply@yourhousing.com")
+            self.assertEqual(call_args[1]["from_email"], "admin@the-khaki-estate.com")
             self.assertEqual(call_args[1]["recipient_list"], ["test@example.com"])
             self.assertTrue(call_args[1]["fail_silently"])
 
