@@ -53,7 +53,6 @@ class NewUserSignupForm(SignupForm):
             attrs={
                 "class": "form-control",
                 "id": "id_user_type",
-                "onchange": "handleUserTypeChange()",
             },
         ),
         help_text="Are you a resident or staff member?",
@@ -64,7 +63,6 @@ class NewUserSignupForm(SignupForm):
         ("", "Select Resident Type"),  # Default empty option
         ("owner", "Owner"),
         ("tenant", "Tenant"),
-        ("family", "Family Member"),
     ]
     resident_type = forms.ChoiceField(
         choices=RESIDENT_TYPES,
@@ -73,7 +71,6 @@ class NewUserSignupForm(SignupForm):
             attrs={
                 "class": "form-control resident-field",
                 "id": "id_resident_type",
-                "onchange": "handleResidentTypeChange()",
                 "style": "display: none;",  # Hidden initially
             },
         ),
@@ -328,10 +325,16 @@ class NewUserSignupForm(SignupForm):
                         raise forms.ValidationError(
                             "Selected flat number doesn't match the resident record.",
                         )
-                    if existing_resident.user is not None:
+                    
+                    # For tenants: Allow selection of flats that already have owners
+                    # For owners: Prevent selection of flats that already have users
+                    if existing_resident.user is not None and resident_type == "owner":
                         raise forms.ValidationError(
                             "This resident record is already linked to a user account.",
                         )
+                    # For tenants, we allow selection of occupied flats (existing_resident.user is not None)
+                    # This is the expected behavior - tenants can rent flats that have owners
+                    
                 except Resident.DoesNotExist:
                     raise forms.ValidationError(
                         "Invalid resident record selected.",
@@ -423,8 +426,19 @@ class NewUserSignupForm(SignupForm):
                     except Resident.DoesNotExist:
                         # Fallback to creating new resident
                         self._create_new_resident(user)
+                        
+                elif resident_type == "tenant" and resident_id:
+                    # This is a tenant selecting an existing flat - create new resident record
+                    # Get flat information from the owner's resident record
+                    try:
+                        owner_resident = Resident.objects.get(id=resident_id)
+                        self._create_tenant_resident(user, owner_resident)
+                    except Resident.DoesNotExist:
+                        # Fallback to creating new resident with provided flat number
+                        self._create_new_resident(user)
+                        
                 else:
-                    # This is a new resident (tenant, family member, or new owner)
+                    # This is a new resident (family member, or new owner without resident_id)
                     self._create_new_resident(user)
 
             elif user.user_type == "staff":
@@ -452,6 +466,31 @@ class NewUserSignupForm(SignupForm):
             sms_notifications=False,
             urgent_only=False,
             is_committee_member=False,
+        )
+
+    def _create_tenant_resident(self, user, owner_resident):
+        """
+        Create a new tenant resident profile based on an existing owner resident.
+        This is used when a tenant selects a flat that already has an owner.
+        """
+        from the_khaki_estate.backend.models import Resident
+        
+        Resident.objects.create(
+            user=user,
+            flat_number=owner_resident.flat_number,  # Use the same flat number
+            block=owner_resident.block,  # Use the same block
+            phone_number=self.cleaned_data["phone_number"],  # Tenant's own phone
+            alternate_phone=self.cleaned_data.get("alternate_phone", ""),
+            resident_type="tenant",  # Set as tenant
+            emergency_contact_name=self.cleaned_data.get("emergency_contact_name", ""),
+            emergency_contact_phone=self.cleaned_data.get("emergency_contact_phone", ""),
+            move_in_date=self.cleaned_data.get("move_in_date"),
+            # Default notification preferences
+            email_notifications=True,
+            sms_notifications=False,
+            urgent_only=False,
+            is_committee_member=False,
+            # No owner_name or owner_email - these are for the tenant's own data
         )
 
     def _create_staff_profile(self, user):

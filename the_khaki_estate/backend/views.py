@@ -1798,35 +1798,65 @@ def mark_all_notifications_read(request):
 @require_http_methods(["GET"])
 def get_available_flats(request):
     """
-    API endpoint to get available flats for owner signup.
+    API endpoint to get available flats for signup form autocomplete.
     
-    Returns flats that don't have associated users yet, formatted for
-    the signup form autocomplete functionality.
+    Supports two modes:
+    - Owner mode: Returns flats that don't have associated users yet (for owner signup)
+    - Tenant mode: Returns ALL flats (for tenant signup - tenants can rent any flat)
+    
+    Query Parameters:
+    - user_type: 'owner' or 'tenant' (defaults to 'owner' for backward compatibility)
     """
     try:
-        # Get all residents that don't have associated users
-        # These are residents created from CSV but not yet linked to user accounts
-        available_residents = Resident.objects.filter(
-            user__isnull=True,
-            resident_type='owner'
-        ).order_by('flat_number')
+        # Get user type from query parameter (defaults to 'owner' for backward compatibility)
+        user_type = request.GET.get('user_type', 'owner')
         
-        # Format data for frontend
-        flats_data = []
-        for resident in available_residents:
-            flats_data.append({
-                'id': resident.id,
-                'flat_number': resident.flat_number,
-                'block': resident.block,
-                'owner_name': resident.owner_name or f'Owner of {resident.flat_number}',
-                'email': resident.owner_email or '',
-                'phone': resident.phone_number,
-            })
+        if user_type == 'tenant':
+            # For tenants: Get ALL flats (both with and without users)
+            # This allows tenants to rent any flat in the building
+            all_residents = Resident.objects.filter(
+                resident_type='owner'  # Only get owner flats (not tenant flats)
+            ).order_by('flat_number')
+            
+            flats_data = []
+            for resident in all_residents:
+                # For tenants, we show the flat info but don't require a specific resident_id
+                # The tenant will create a new resident record linked to this flat
+                flats_data.append({
+                    'id': resident.id,  # This is the flat's owner resident ID (for reference)
+                    'flat_number': resident.flat_number,
+                    'block': resident.block,
+                    'owner_name': resident.owner_name or f'Owner of {resident.flat_number}',
+                    'email': resident.owner_email or '',
+                    'phone': resident.phone_number,
+                    'has_user': resident.user is not None,  # Indicate if flat already has a user
+                })
+                
+        else:
+            # For owners: Get only flats that don't have associated users yet
+            # These are residents created from CSV but not yet linked to user accounts
+            available_residents = Resident.objects.filter(
+                user__isnull=True,
+                resident_type='owner'
+            ).order_by('flat_number')
+            
+            flats_data = []
+            for resident in available_residents:
+                flats_data.append({
+                    'id': resident.id,
+                    'flat_number': resident.flat_number,
+                    'block': resident.block,
+                    'owner_name': resident.owner_name or f'Owner of {resident.flat_number}',
+                    'email': resident.owner_email or '',
+                    'phone': resident.phone_number,
+                    'has_user': False,  # Always False for available flats
+                })
         
         return JsonResponse({
             'status': 'success',
             'flats': flats_data,
-            'count': len(flats_data)
+            'count': len(flats_data),
+            'user_type': user_type,
         })
         
     except Exception as e:

@@ -28,29 +28,42 @@ $(document).ready(function() {
 
 /**
  * Load available flats data from the server.
- * This fetches all flats that don't have associated users yet.
+ * This fetches flats based on the current user type (owner vs tenant).
  */
 function loadAvailableFlats() {
-    console.log('Loading available flats from API...');
-    fetch('/backend/api/flats/available/')
+    // Determine the user type from the form
+    const userType = $('#id_user_type').val();
+    const residentType = $('#id_resident_type').val();
+
+    // Set the API parameter based on resident type
+    let apiUserType = 'owner'; // Default for backward compatibility
+
+    if (userType === 'resident' && residentType === 'tenant') {
+        apiUserType = 'tenant';
+    } else if (userType === 'resident' && residentType === 'owner') {
+        apiUserType = 'owner';
+    }
+
+    console.log('Loading available flats from API for user type:', apiUserType);
+    fetch(`/backend/api/flats/available/?user_type=${apiUserType}`)
         .then(response => {
             console.log('API response status:', response.status);
             return response.json();
         })
         .then(data => {
             availableFlats = data.flats || [];
-            console.log('Loaded available flats:', availableFlats.length, 'flats');
+            console.log('Loaded available flats:', availableFlats.length, 'flats for', apiUserType, 'mode');
             console.log('Sample flats:', availableFlats.slice(0, 3));
         })
         .catch(error => {
             console.error('Error loading available flats:', error);
             // Fallback: create some sample data for testing
             availableFlats = [
-                { id: 1, flat_number: 'A-101', block: 'A', owner_name: 'Meeraj Khalid', email: 'merajkhalidips@gmail.com', phone: '+919836293377' },
-                { id: 2, flat_number: 'A-102', block: 'A', owner_name: 'Ishani Paul', email: 'ishanipaul@gmail.com', phone: '+919989702225' },
-                { id: 3, flat_number: 'B-101', block: 'B', owner_name: 'Amit Javalgi', email: 'amitpjavalgi@gmail.com', phone: '+919547963285' },
-                { id: 4, flat_number: 'C1-201', block: 'C1', owner_name: 'Ajay Kumar Thakur', email: 'ajay956@gmail.com', phone: '+919051500356' },
-                { id: 5, flat_number: 'D-301', block: 'D', owner_name: 'Alok Rajoria', email: 'akrajoriaips@gmail.com', phone: '+919051217042' },
+                { id: 1, flat_number: 'A-101', block: 'A', owner_name: 'Meeraj Khalid', email: 'merajkhalidips@gmail.com', phone: '+919836293377', has_user: false },
+                { id: 2, flat_number: 'A-102', block: 'A', owner_name: 'Ishani Paul', email: 'ishanipaul@gmail.com', phone: '+919989702225', has_user: true },
+                { id: 3, flat_number: 'B-101', block: 'B', owner_name: 'Amit Javalgi', email: 'amitpjavalgi@gmail.com', phone: '+919547963285', has_user: false },
+                { id: 4, flat_number: 'C1-201', block: 'C1', owner_name: 'Ajay Kumar Thakur', email: 'ajay956@gmail.com', phone: '+919051500356', has_user: true },
+                { id: 5, flat_number: 'D-301', block: 'D', owner_name: 'Alok Rajoria', email: 'akrajoriaips@gmail.com', phone: '+919051217042', has_user: false },
                 // Add more sample data as needed
             ];
             console.log('Using fallback data:', availableFlats.length, 'flats');
@@ -144,7 +157,7 @@ function handleUserTypeChange() {
 
 /**
  * Handle resident type selection change.
- * Shows/hides owner-specific fields.
+ * Shows/hides owner-specific fields and sets up appropriate behavior.
  */
 function handleResidentTypeChange() {
     const residentType = $('#id_resident_type').val();
@@ -158,28 +171,54 @@ function handleResidentTypeChange() {
         // Make flat number required for owners
         $('#id_flat_number').prop('required', true);
 
-        // Set up flat number autocomplete
+        // Set up flat number autocomplete with auto-population
         console.log('Setting up autocomplete for owner');
         setupFlatNumberAutocomplete();
 
+        // Reload flats data for owner mode (shows only available flats)
+        loadAvailableFlats();
+
+        // Remove tenant mode indicator if it exists
+        $('.tenant-mode-indicator').remove();
+
+    } else if (residentType === 'tenant') {
+        console.log('Tenant selected, showing flat selection but allowing manual input');
+        // Show owner-specific fields (flat selection)
+        ownerFields.show();
+
+        // Make flat number required for tenants (they need to select a flat)
+        $('#id_flat_number').prop('required', true);
+
+        // Set up flat number autocomplete but WITHOUT auto-population
+        console.log('Setting up autocomplete for tenant (manual input mode)');
+        setupFlatNumberAutocompleteForTenant();
+
+        // Reload flats data for tenant mode (shows all flats, not just available ones)
+        loadAvailableFlats();
+
     } else {
-        // Hide owner-specific fields
+        // Family member or other - hide owner-specific fields
+        console.log(' or other selected, hiding owner fields');
         ownerFields.hide();
 
-        // Make flat number not required for tenants/family
+        // Make flat number not required for family members
         $('#id_flat_number').prop('required', false);
 
         // Clear any populated data
         clearAutoPopulatedData();
+
+        // Remove tenant mode indicator if it exists
+        $('.tenant-mode-indicator').remove();
     }
 }
 
 /**
- * Set up autocomplete functionality for flat number input.
+ * Set up autocomplete functionality for flat number input (for owners).
+ * This version auto-populates personal fields when a flat is selected.
  */
 function setupFlatNumberAutocomplete() {
     const $flatNumberInput = $('#id_flat_number');
-    console.log('Setting up autocomplete for:', $flatNumberInput);
+    console.log('Setting up autocomplete for owner:', $flatNumberInput);
 
     // Create suggestions container
     let $suggestionsContainer = $('#flat-suggestions');
@@ -210,6 +249,52 @@ function setupFlatNumberAutocomplete() {
             console.log('Could not find parent container');
         }
     }
+}
+
+/**
+ * Set up autocomplete functionality for flat number input (for tenants).
+ * This version shows flat suggestions but does NOT auto-populate personal fields.
+ * Tenants can manually enter their own name, email, and phone details.
+ */
+function setupFlatNumberAutocompleteForTenant() {
+    const $flatNumberInput = $('#id_flat_number');
+    console.log('Setting up autocomplete for tenant (manual input mode):', $flatNumberInput);
+
+    // Create suggestions container
+    let $suggestionsContainer = $('#flat-suggestions');
+    if ($suggestionsContainer.length === 0) {
+        $suggestionsContainer = $('<div>')
+            .attr('id', 'flat-suggestions')
+            .addClass('flat-suggestions')
+            .css({
+                'position': 'absolute',
+                'background': 'white',
+                'border': '2px solid #0d6efd',
+                'border-top': 'none',
+                'max-height': '200px',
+                'overflow-y': 'auto',
+                'z-index': '1000',
+                'width': '100%',
+                'box-shadow': '0 2px 5px rgba(0,0,0,0.2)',
+                'display': 'none'
+            });
+
+        // Make the parent container relative positioned
+        const $parentContainer = $flatNumberInput.closest('.mb-3');
+        if ($parentContainer.length > 0) {
+            $parentContainer.css('position', 'relative');
+            $parentContainer.append($suggestionsContainer);
+            console.log('Added suggestions container to parent for tenant');
+        } else {
+            console.log('Could not find parent container');
+        }
+    }
+
+    // Clear any existing auto-populated data to ensure manual input
+    clearAutoPopulatedData();
+
+    // Add visual indicator for tenant mode
+    addTenantModeIndicator();
 }
 
 /**
@@ -264,20 +349,30 @@ function showFlatSuggestions() {
     // Add suggestions
     console.log('Adding suggestions for', filteredFlats.length, 'flats');
     filteredFlats.forEach((flat, index) => {
-        const $suggestionItem = $('<div>')
-            .addClass('suggestion-item')
-            .css({
-                'padding': '10px',
-                'cursor': 'pointer',
-                'border-bottom': '1px solid #eee'
-            })
-            .html(`
+                const $suggestionItem = $('<div>')
+                    .addClass('suggestion-item')
+                    .css({
+                        'padding': '10px',
+                        'cursor': 'pointer',
+                        'border-bottom': '1px solid #eee'
+                    })
+                    .html(`
                 <strong>${flat.flat_number}</strong> - ${flat.owner_name}<br>
                 <small>${flat.email} | ${flat.phone}</small>
+                ${$('#id_resident_type').val() === 'tenant' ? 
+                    `<br><em style="color: #666;">You will enter your own details below</em>` + 
+                    (flat.has_user ? '<br><span style="color: #28a745; font-weight: bold;">✓ Flat has owner</span>' : '<br><span style="color: #ffc107; font-weight: bold;">⚠ Flat available</span>') 
+                    : ''}
             `)
             .on('click', () => {
                 console.log('Clicked on flat:', flat);
-                selectFlat(flat);
+                // Use appropriate selection function based on resident type
+                const residentType = $('#id_resident_type').val();
+                if (residentType === 'tenant') {
+                    selectFlatForTenant(flat);
+                } else {
+                    selectFlat(flat);
+                }
             })
             .on('mouseenter', function() {
                 $(this).css('background-color', '#f5f5f5');
@@ -308,7 +403,8 @@ function hideFlatSuggestions() {
 }
 
 /**
- * Select a flat and populate the form.
+ * Select a flat and populate the form (for owners).
+ * This auto-populates all personal fields with owner data.
  */
 function selectFlat(flat) {
     // Set the flat number
@@ -319,6 +415,44 @@ function selectFlat(flat) {
 
     // Populate auto-filled fields
     populateResidentData(flat);
+
+    // Hide suggestions
+    hideFlatSuggestions();
+}
+
+/**
+ * Select a flat for tenant (manual input mode).
+ * This only sets the flat number and block, but leaves personal fields for manual input.
+ * 
+ * Note: For tenants, the resident_id points to the owner's resident record,
+ * but we create a NEW tenant resident record with the same flat_number/block.
+ */
+function selectFlatForTenant(flat) {
+    // Set the flat number
+    $('#id_flat_number').val(flat.flat_number);
+
+    // Set the resident ID (hidden field) - this references the owner's resident record
+    // The backend will use this to get flat info but create a new tenant record
+    $('#id_resident_id').val(flat.id);
+
+    // Only populate block field (this is property-specific, not personal)
+    $('#id_block').val(flat.block);
+
+    // Make block field read-only since it's property-specific
+    $('#id_block').prop('readonly', true).css({
+        'background-color': '#f8f9fa'
+    }).attr('title', 'Block is automatically set based on the selected flat');
+
+    // Ensure personal fields are editable for tenant input
+    const personalFields = ['id_first_name', 'id_last_name', 'id_email', 'id_phone_number'];
+    personalFields.forEach(fieldId => {
+        $(`#${fieldId}`).prop('readonly', false).css({
+            'background-color': ''
+        }).removeAttr('title');
+    });
+
+    console.log('Flat selected for tenant:', flat.flat_number, 'Block:', flat.block);
+    console.log('Personal fields cleared for manual tenant input');
 
     // Hide suggestions
     hideFlatSuggestions();
@@ -389,6 +523,38 @@ function clearAutoPopulatedData() {
 }
 
 /**
+ * Add visual indicator for tenant mode to help users understand they need to enter their own details.
+ */
+function addTenantModeIndicator() {
+    // Remove any existing tenant mode indicator
+    $('.tenant-mode-indicator').remove();
+
+    // Add indicator above the personal fields
+    const personalFieldsContainer = $('#id_first_name').closest('.mb-3').parent();
+    if (personalFieldsContainer.length > 0) {
+        const $indicator = $('<div>')
+            .addClass('tenant-mode-indicator alert alert-info')
+            .css({
+                'margin-bottom': '15px',
+                'padding': '10px',
+                'border-radius': '5px',
+                'border': '1px solid #bee5eb',
+                'background-color': '#d1ecf1',
+                'color': '#0c5460'
+            })
+            .html(`
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Tenant Mode:</strong> You will enter your own personal details below. 
+                The flat number and block will be automatically set when you select a flat above.
+            `);
+
+        // Insert before the first personal field
+        personalFieldsContainer.prepend($indicator);
+        console.log('Added tenant mode indicator');
+    }
+}
+
+/**
  * Fetch resident data when flat number loses focus.
  * This is a fallback in case the user types a flat number manually.
  */
@@ -407,7 +573,13 @@ function fetchResidentData() {
     );
 
     if (matchingFlat) {
-        selectFlat(matchingFlat);
+        // Use appropriate selection function based on resident type
+        const residentType = $('#id_resident_type').val();
+        if (residentType === 'tenant') {
+            selectFlatForTenant(matchingFlat);
+        } else {
+            selectFlat(matchingFlat);
+        }
     }
 }
 
@@ -421,15 +593,48 @@ function validateForm() {
     const flatNumber = $('#id_flat_number').val();
     const residentId = $('#id_resident_id').val();
 
-    // Validate owner residents have selected a flat
-    if (userType === 'resident' && residentType === 'owner') {
+    // Validate residents have selected a flat (both owners and tenants need to select a flat)
+    if (userType === 'resident' && (residentType === 'owner' || residentType === 'tenant')) {
         if (!flatNumber) {
-            alert('Please select a flat number for owner residents.');
+            const residentTypeText = residentType === 'owner' ? 'owner' : 'tenant';
+            alert(`Please select a flat number for ${residentTypeText} residents.`);
             return false;
         }
 
         if (!residentId) {
             alert('Please select a valid flat from the suggestions.');
+            return false;
+        }
+    }
+
+    // Additional validation for tenants - ensure they've entered their personal details
+    if (userType === 'resident' && residentType === 'tenant') {
+        const firstName = $('#id_first_name').val().trim();
+        const lastName = $('#id_last_name').val().trim();
+        const email = $('#id_email').val().trim();
+        const phone = $('#id_phone_number').val().trim();
+
+        if (!firstName) {
+            alert('Please enter your first name.');
+            $('#id_first_name').focus();
+            return false;
+        }
+
+        if (!lastName) {
+            alert('Please enter your last name.');
+            $('#id_last_name').focus();
+            return false;
+        }
+
+        if (!email) {
+            alert('Please enter your email address.');
+            $('#id_email').focus();
+            return false;
+        }
+
+        if (!phone) {
+            alert('Please enter your phone number.');
+            $('#id_phone_number').focus();
             return false;
         }
     }
